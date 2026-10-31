@@ -119,19 +119,107 @@ selected = st.selectbox(
 
 graph = api_get(f"/chapters/{selected}/graph")
 
-st.caption("Status: qaralama — admin təsdiqləyənə qədər şagirdlərə görünmür.")
+STATUS_LABEL = {
+    "auto_ok": "Yoxlamadan keçdi",
+    "needs_review": "Baxılmalıdır",
+    "approved": "Təsdiqlənib",
+    "rejected": "Rədd edilib",
+}
 
-left, right = st.columns([3, 2])
-with left:
-    st.subheader("Mövzu xəritəsi")
-    if graph["edges"]:
-        st.graphviz_chart(graph_dot(graph), use_container_width=True)
-    else:
-        st.info("Asılılıq tapılmadı.")
-with right:
-    st.subheader("Mövzular")
-    st.dataframe(
-        [{"Mövzu": c["name"], "İzah": c["description"]} for c in graph["concepts"]],
-        hide_index=True,
-        use_container_width=True,
-    )
+
+def api_send(method, path, **kwargs):
+    resp = requests.request(method, f"{API_URL}{path}", timeout=kwargs.pop("timeout", 30), **kwargs)
+    if not resp.ok:
+        st.error(error_text(resp))
+        return None
+    return resp.json()
+
+
+tab_map, tab_bank = st.tabs(["Mövzu xəritəsi", "Sual bankı"])
+
+with tab_map:
+    st.caption("Status: qaralama — admin təsdiqləyənə qədər şagirdlərə görünmür.")
+    left, right = st.columns([3, 2])
+    with left:
+        if graph["edges"]:
+            st.graphviz_chart(graph_dot(graph), use_container_width=True)
+        else:
+            st.info("Asılılıq tapılmadı.")
+    with right:
+        st.dataframe(
+            [{"Mövzu": c["name"], "İzah": c["description"]} for c in graph["concepts"]],
+            hide_index=True,
+            use_container_width=True,
+        )
+
+with tab_bank:
+    stats = api_get(f"/chapters/{selected}/questions/stats")
+
+    if stats["total"] == 0:
+        st.info("Bu bölmə üçün hələ sual yoxdur. AI hər mövzu üçün 2 sual şablonu yaradacaq.")
+    cols = st.columns(4)
+    cols[0].metric("Cəmi şablon", stats["total"])
+    cols[1].metric("Yoxlamadan keçdi", stats["auto_ok"])
+    cols[2].metric("Baxılmalıdır", stats["needs_review"])
+    cols[3].metric("Təsdiqlənib", stats["approved"])
+
+    b1, b2 = st.columns(2)
+    gen_label = "Sual şablonları yarat" if stats["total"] == 0 else "Yenidən yarat (təsdiqlənmişlər qalır)"
+    if b1.button(gen_label, type="primary", use_container_width=True):
+        with st.status("AI sual şablonları yazır, kod onları yoxlayır...", expanded=False) as status:
+            res = api_send("POST", f"/chapters/{selected}/questions/generate", timeout=300)
+            if res:
+                status.update(label=f"{res['total']} şablon hazırdır", state="complete")
+                st.rerun()
+            else:
+                status.update(label="Alınmadı", state="error")
+    if b2.button(f"Yoxlamadan keçənlərin hamısını təsdiqlə ({stats['auto_ok']})",
+                 disabled=stats["auto_ok"] == 0, use_container_width=True):
+        api_send("POST", f"/chapters/{selected}/questions/approve-auto")
+        st.rerun()
+
+    if stats["total"]:
+        st.divider()
+        view = st.radio("Göstər", ["Baxılmalıdır", "Hamısı", "Təsdiqlənib"], horizontal=True)
+        status_filter = {"Baxılmalıdır": "needs_review", "Təsdiqlənib": "approved", "Hamısı": None}[view]
+        params = {"status": status_filter} if status_filter else {}
+        resp = requests.get(f"{API_URL}/chapters/{selected}/questions", params=params, timeout=30)
+        if not resp.ok:
+            st.error(f"Suallar yüklənmədi ({resp.status_code}): {error_text(resp)}")
+            st.stop()
+        questions = resp.json()
+
+        if not questions:
+            st.success("Bu siyahıda sual yoxdur.")
+
+        for q in questions:
+            with st.container(border=True):
+                top = st.columns([3, 1])
+                top[0].markdown(f"**{q['concept']}** · çətinlik {q['difficulty']}")
+                top[1].markdown(f"`{STATUS_LABEL.get(q['status'], q['status'])}`")
+
+                if q["sample_text"]:
+                    st.markdown(f"#### {q['sample_text']}")
+                    for o in q["sample_options"]:
+                        if o["correct"]:
+                            st.markdown(f"✅ **{o['value']}** — düz cavab")
+                        else:
+                            st.markdown(f"❌ **{o['value']}** — {o['misconception']} → *{o['points_to']}*")
+                else:
+                    st.warning("Bu şablondan sual yaratmaq olmadı.")
+
+                st.caption(f"Şablon: {q['template_text']}")
+                if q["source_quote"]:
+                    st.caption(f"Mənbə: “{q['source_quote']}”")
+                for note in q.get("notes", []):
+                    st.info(note)
+                for prob in q["problems"]:
+                    st.error(prob)
+
+                a, r, _ = st.columns([1, 1, 3])
+                if a.button("Təsdiqlə", key=f"ok{q['id']}", disabled=bool(q["problems"]) or q["status"] == "approved"):
+                    api_send("PATCH", f"/questions/{q['id']}", json={"status": "approved"})
+                    st.rerun()
+                if r.button("Rədd et", key=f"no{q['id']}", disabled=q["status"] == "rejected"):
+                    api_send("PATCH", f"/questions/{q['id']}", json={"status": "rejected"})
+                    st.rerun()

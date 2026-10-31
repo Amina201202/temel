@@ -1,15 +1,20 @@
+import logging
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session, selectinload
 
 from .db import Base, engine, get_db
 from .extract import ExtractionError, extract_graph
-from .models import Chapter, Concept, ConceptEdge
-from .schemas import ChapterOut, ConceptOut, EdgeOut, GraphOut
+from .models import Chapter, Concept, ConceptEdge, QuestionTemplate
+from .questions import build_checked_templates, build_instance
+from .schemas import (ChapterOut, ConceptOut, EdgeOut, GraphOut, OptionOut, QuestionOut,
+                      QuestionStats, StatusIn)
 
 MAX_SIZE = 15 * 1024 * 1024  # 15 MB
+logger = logging.getLogger("temel")
 
 
 @asynccontextmanager
@@ -83,7 +88,10 @@ def create_chapter(
     if not graph.concepts:
         raise HTTPException(422, "Bu fayldan heç bir mövzu tapılmadı")
 
-    chapter = Chapter(title=title, grade=grade, source_file=file.filename or "")
+    source_text = ""
+    if (file.filename or "").lower().endswith(".txt"):
+        source_text = data.decode("utf-8", errors="ignore")
+    chapter = Chapter(title=title, grade=grade, source_file=file.filename or "", source_text=source_text)
     db.add(chapter)
     db.flush()
 
@@ -125,3 +133,124 @@ def list_chapters(db: Session = Depends(get_db)):
 @app.get("/chapters/{chapter_id}/graph", response_model=GraphOut)
 def get_graph(chapter_id: int, db: Session = Depends(get_db)):
     return load_graph(db, chapter_id)
+
+
+# ---------------- sual banki ----------------
+
+def question_out(q: QuestionTemplate, with_sample=True) -> QuestionOut:
+    sample = None
+    if with_sample:
+        try:
+            sample = build_instance(q.as_dict(), seed=q.id)
+        except Exception:  # noqa: BLE001
+            # bir pis sablon butun siyahini cokdurmesin
+            logger.exception("numune yaradilmadi, sablon id=%s", q.id)
+    return QuestionOut(
+        id=q.id,
+        concept=q.concept.name,
+        difficulty=q.difficulty,
+        status=q.status,
+        template_text=q.text,
+        source_quote=q.source_quote,
+        problems=(q.check_report or {}).get("problems", []),
+        notes=(q.check_report or {}).get("notes", []),
+        sample_text=sample["text"] if sample else None,
+        sample_options=[OptionOut(**o) for o in sample["options"]] if sample else [],
+    )
+
+
+@app.post("/chapters/{chapter_id}/questions/generate", response_model=QuestionStats)
+def generate_questions(chapter_id: int, db: Session = Depends(get_db)):
+    graph = load_graph(db, chapter_id)
+    ch = db.get(Chapter, chapter_id)
+
+    # her movzunun evvelceden bilinmeli movzulari
+    prereqs = {c.name: [] for c in graph.concepts}
+    for e in graph.edges:
+        prereqs[e.to_concept].append(e.from_concept)
+    by_name = {c.name: c for c in graph.concepts}
+
+    def work(concept):
+        return concept, build_checked_templates(concept.name, concept.description,
+                                                prereqs[concept.name], ch.source_text)
+
+    # gemini cagirislarini paralel edirik, yoxsa 12 movzu bir nece deqiqe cekir
+    results, errors = [], []
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        futures = [pool.submit(work, c) for c in graph.concepts]
+        for f in futures:
+            try:
+                results.append(f.result())
+            except ExtractionError as e:
+                errors.append(str(e))
+
+    if not results:
+        raise HTTPException(502, "AI heç bir sual yarada bilmədi: " + "; ".join(errors[:3]))
+
+    # tesdiqlenmis suallara toxunmuruq, qalanlarini yenisi ile evez edirik
+    db.execute(delete(QuestionTemplate).where(
+        QuestionTemplate.chapter_id == chapter_id,
+        QuestionTemplate.status != "approved",
+    ))
+
+    for concept, items in results:
+        for data, report, meta in items:
+            db.add(QuestionTemplate(
+                chapter_id=chapter_id,
+                concept_id=by_name[concept.name].id,
+                difficulty=meta["difficulty"],
+                source_quote=meta["source_quote"],
+                status="auto_ok" if report["ok"] else "needs_review",
+                check_report=report,
+                **data,
+            ))
+    db.commit()
+    return question_stats(chapter_id, db)
+
+
+@app.get("/chapters/{chapter_id}/questions", response_model=list[QuestionOut])
+def list_questions(chapter_id: int, status: str | None = None, db: Session = Depends(get_db)):
+    query = (select(QuestionTemplate)
+             .where(QuestionTemplate.chapter_id == chapter_id)
+             .options(selectinload(QuestionTemplate.concept))
+             .order_by(QuestionTemplate.concept_id, QuestionTemplate.difficulty))
+    if status:
+        query = query.where(QuestionTemplate.status == status)
+    return [question_out(q) for q in db.scalars(query).all()]
+
+
+@app.get("/chapters/{chapter_id}/questions/stats", response_model=QuestionStats)
+def question_stats(chapter_id: int, db: Session = Depends(get_db)):
+    statuses = db.scalars(select(QuestionTemplate.status).where(QuestionTemplate.chapter_id == chapter_id)).all()
+    return QuestionStats(
+        total=len(statuses),
+        auto_ok=statuses.count("auto_ok"),
+        needs_review=statuses.count("needs_review"),
+        approved=statuses.count("approved"),
+        rejected=statuses.count("rejected"),
+    )
+
+
+@app.patch("/questions/{question_id}", response_model=QuestionOut)
+def set_question_status(question_id: int, body: StatusIn, db: Session = Depends(get_db)):
+    if body.status not in ("approved", "rejected", "needs_review"):
+        raise HTTPException(400, "Status səhvdir")
+    q = db.get(QuestionTemplate, question_id)
+    if q is None:
+        raise HTTPException(404, "Sual tapılmadı")
+    if body.status == "approved" and not (q.check_report or {}).get("ok"):
+        # kod yoxlamasindan kecmeyen sablon sagirde getmemelidir
+        raise HTTPException(409, "Bu şablon avtomatik yoxlamadan keçməyib, əvvəlcə düzəldilməlidir")
+    q.status = body.status
+    db.commit()
+    db.refresh(q)
+    return question_out(q)
+
+
+@app.post("/chapters/{chapter_id}/questions/approve-auto", response_model=QuestionStats)
+def approve_auto(chapter_id: int, db: Session = Depends(get_db)):
+    for q in db.scalars(select(QuestionTemplate).where(
+            QuestionTemplate.chapter_id == chapter_id, QuestionTemplate.status == "auto_ok")).all():
+        q.status = "approved"
+    db.commit()
+    return question_stats(chapter_id, db)

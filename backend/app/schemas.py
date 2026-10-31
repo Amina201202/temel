@@ -31,3 +31,36 @@ class GraphOut(BaseModel):
     chapter: ChapterOut
     concepts: list[ConceptOut]
     edges: list[EdgeOut]
+
+
+class OptionOut(BaseModel):
+    value: str
+    correct: bool
+    misconception: str | None = None
+    points_to: str | None = None
+
+
+class QuestionOut(BaseModel):
+    id: int
+    concept: str
+    difficulty: int
+    status: str
+    template_text: str
+    source_quote: str
+    problems: list[str]
+    notes: list[str] = []
+    # admin ucun numune: sablondan yaranmis bir konkret sual
+    sample_text: str | None = None
+    sample_options: list[OptionOut] = []
+
+
+class StatusIn(BaseModel):
+    status: str
+
+
+class QuestionStats(BaseModel):
+    total: int
+    auto_ok: int
+    needs_review: int
+    approved: int
+    rejected: int
