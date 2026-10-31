@@ -1,0 +1,5 @@
+[theme]
+primaryColor = "#3D4BE0"
+
+[server]
+maxUploadSize = 15

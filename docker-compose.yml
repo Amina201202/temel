@@ -5,8 +5,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "5433:5432"
+    # port acmiriq, db-ye yalniz api qosulur
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
