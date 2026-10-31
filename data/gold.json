@@ -1,0 +1,101 @@
+{
+  "_qeyd": "QARALAMA - Claude dersliyin bolmelerine gore yazib. Ozun yoxla, sehv ox varsa duzelt.",
+  "concepts": [
+    "Bölənlər",
+    "Bölünənlər",
+    "ƏBOB",
+    "ƏKOB",
+    "Adi kəsr",
+    "Qarışıq ədəd",
+    "Kəsrlərin ixtisarı",
+    "Ortaq məxrəcə gətirmə",
+    "Kəsrlərin müqayisəsi",
+    "Kəsrlərin toplanması və çıxılması",
+    "Qarışıq ədədlərin toplanması",
+    "Qarışıq ədədlərin çıxılması"
+  ],
+  "edges": [
+    [
+      "Bölənlər",
+      "ƏBOB"
+    ],
+    [
+      "Bölünənlər",
+      "ƏKOB"
+    ],
+    [
+      "ƏBOB",
+      "Kəsrlərin ixtisarı"
+    ],
+    [
+      "Adi kəsr",
+      "Kəsrlərin ixtisarı"
+    ],
+    [
+      "Adi kəsr",
+      "Qarışıq ədəd"
+    ],
+    [
+      "ƏKOB",
+      "Ortaq məxrəcə gətirmə"
+    ],
+    [
+      "Adi kəsr",
+      "Ortaq məxrəcə gətirmə"
+    ],
+    [
+      "Ortaq məxrəcə gətirmə",
+      "Kəsrlərin müqayisəsi"
+    ],
+    [
+      "Ortaq məxrəcə gətirmə",
+      "Kəsrlərin toplanması və çıxılması"
+    ],
+    [
+      "Kəsrlərin toplanması və çıxılması",
+      "Qarışıq ədədlərin toplanması"
+    ],
+    [
+      "Qarışıq ədəd",
+      "Qarışıq ədədlərin toplanması"
+    ],
+    [
+      "Kəsrlərin toplanması və çıxılması",
+      "Qarışıq ədədlərin çıxılması"
+    ],
+    [
+      "Qarışıq ədəd",
+      "Qarışıq ədədlərin çıxılması"
+    ]
+  ],
+  "aliases": {
+    "Bölənlər": [
+      "Natural ədədin bölənləri",
+      "Ədədin bölənləri"
+    ],
+    "Bölünənlər": [
+      "Natural ədədin bölünənləri",
+      "Ədədin bölünənləri"
+    ],
+    "ƏBOB": [
+      "Ən böyük ortaq bölən"
+    ],
+    "ƏKOB": [
+      "Ən kiçik ortaq bölünən"
+    ],
+    "Adi kəsr": [
+      "Adi kəsrlər",
+      "Düzgün və düzgün olmayan kəsrlər"
+    ],
+    "Ortaq məxrəcə gətirmə": [
+      "Ortaq məxrəc",
+      "Kəsrlərin ortaq məxrəcə gətirilməsi"
+    ],
+    "Kəsrlərin toplanması və çıxılması": [
+      "Məxrəcləri müxtəlif olan kəsrlərin toplanması",
+      "Məxrəcləri müxtəlif olan kəsrlərin çıxılması",
+      "Kəsrlərin toplanması",
+      "Kəsrlərin çıxılması"
+    ]
+  }
+}
