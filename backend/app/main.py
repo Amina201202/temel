@@ -235,7 +235,7 @@ def generate_questions(chapter_id: int, db: Session = Depends(get_db)):
 
     def work(concept):
         return concept, build_checked_templates(concept.name, concept.description,
-                                                prereqs[concept.name], ch.source_text)
+                                                prereqs[concept.name], ch.source_text, ch.grade)
 
     # gemini cagirislarini paralel edirik, yoxsa 12 movzu bir nece deqiqe cekir
     results, errors = [], []
@@ -477,7 +477,7 @@ def attempt_explanation(attempt_id: int, body: TokenIn, db: Session = Depends(ge
     wrong_answers = [{"concept": w.concept, "question": w.question_text, "chosen": w.chosen,
                       "correct_value": w.correct_value, "misconception": w.misconception} for w in wrong]
     try:
-        exp = generate_explanation(root, d["weak_because"], wrong_answers, pages)
+        exp = generate_explanation(root, d["weak_because"], wrong_answers, pages, chapter.grade)
     except Exception as e:  # noqa: BLE001
         logger.exception("izah alinmadi")
         raise HTTPException(502, "AI izahı hazırlaya bilmədi, bir az sonra yenidən cəhd et") from e
@@ -525,7 +525,7 @@ def ask_question(attempt_id: int, body: AskIn, db: Session = Depends(get_db)):
         for extra in search(db, attempt.chapter_id, f"{concept}. {question}", k=3):
             if extra["page"] not in {x["page"] for x in pages} and len(pages) < 3:
                 pages.append(extra)
-        ans = answer_question(question, concept, pages)
+        ans = answer_question(question, concept, pages, db.get(Chapter, attempt.chapter_id).grade)
     except GuardBlock as g:
         store().incr(f"guard:{g.rail}")  # neçə defe hansi qoruma isledi - statistikaya
         logger.info("guard block rail=%s attempt=%s", g.rail, attempt.id)

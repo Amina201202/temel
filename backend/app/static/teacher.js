@@ -1,6 +1,8 @@
 // Temel - muellim paneli
 const TOKEN_KEY = "temel_teacher_token";
 const $ = (id) => document.getElementById(id);
+// sinif sekilcesi: 5-ci, 6-ci, 9-cu
+const gradeLabel = (g) => `${g}-${({ 1: "ci", 2: "ci", 3: "cü", 4: "cü", 5: "ci", 6: "cı", 7: "ci", 8: "ci", 9: "cu", 10: "cu", 11: "ci" })[g] || "ci"}`;
 let token = null;
 let currentSession = null;
 let pollTimer = null;
@@ -62,7 +64,7 @@ async function openHome() {
 
   const chapters = await api("GET", "/public/chapters");
   $("chapter-select").innerHTML = chapters.length
-    ? chapters.map((c) => `<option value="${c.id}">${esc(c.title)} · ${c.grade}-ci sinif</option>`).join("")
+    ? chapters.map((c) => `<option value="${c.id}">${esc(c.title)} · ${gradeLabel(c.grade)} sinif</option>`).join("")
     : `<option value="">Hazır mövzu yoxdur</option>`;
 
   const sessions = await api("GET", "/teacher/sessions");

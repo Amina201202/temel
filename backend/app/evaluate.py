@@ -210,11 +210,11 @@ class Judge(BaseModel):
     clear: int = Field(description="Sual nə qədər aydındır, 1-5")
     one_correct: bool = Field(description="Yalnız bir düz cavab var və o, işarələnmiş cavabdır")
     realistic: int = Field(description="Səhv variantlar real şagird səhvlərinə nə qədər oxşayır, 1-5")
-    grade_ok: bool = Field(description="5-ci sinif üçün uyğundur")
+    grade_ok: bool = Field(description="Bu sinif üçün uyğundur")
     comment: str = Field(description="1 qısa cümlə")
 
 
-JUDGE_PROMPT = """Sən təcrübəli riyaziyyat müəllimisən. 5-ci sinif diaqnostik test sualını qiymətləndir.
+JUDGE_PROMPT = """Sən təcrübəli riyaziyyat müəllimisən. {grade} sinif diaqnostik test sualını qiymətləndir.
 
 Mövzu: {concept}
 Sual: {question}
@@ -240,7 +240,8 @@ def eval_judge():
             continue
         correct = next(o["value"] for o in inst["options"] if o["correct"])
         wrong = "\n".join(f"- {o['value']}: {o['misconception']}" for o in inst["options"] if not o["correct"])
-        prompt = JUDGE_PROMPT.format(concept=q.concept.name, question=inst["text"], correct=correct, wrong=wrong)
+        from .extract import grade_label
+        prompt = JUDGE_PROMPT.format(grade=grade_label(db.get(Chapter, q.chapter_id).grade), concept=q.concept.name, question=inst["text"], correct=correct, wrong=wrong)
         resp = get_client().models.generate_content(
             model=MODEL, contents=prompt,
             config=types.GenerateContentConfig(response_mime_type="application/json", response_schema=Judge, temperature=0))

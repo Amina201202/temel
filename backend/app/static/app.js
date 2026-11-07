@@ -3,6 +3,8 @@ const API = "";  // eyni serverdir
 const STORE_KEY = "temel_attempt";
 
 const $ = (id) => document.getElementById(id);
+// sinif sekilcesi: 5-ci, 6-ci, 9-cu
+const gradeLabel = (g) => `${g}-${({ 1: "ci", 2: "ci", 3: "cü", 4: "cü", 5: "ci", 6: "cı", 7: "ci", 8: "ci", 9: "cu", 10: "cu", 11: "ci" })[g] || "ci"}`;
 let selectedChapter = null;
 let attempt = null;       // {attempt_id, token}
 let pendingStep = null;   // cavabdan sonra gelen novbeti addim
@@ -72,7 +74,7 @@ async function loadChapters() {
       btn.type = "button";
       btn.className = "choice";
       btn.innerHTML = `<span><span class="title">${esc(ch.title)}</span>
-        <span class="sub">${ch.grade}-ci sinif</span></span><span class="radio"></span>`;
+        <span class="sub">${gradeLabel(ch.grade)} sinif</span></span><span class="radio"></span>`;
       btn.onclick = () => {
         selectedChapter = ch.id;
         box.querySelectorAll(".choice").forEach((b) => b.classList.toggle("selected", b === btn));

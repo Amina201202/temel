@@ -9,7 +9,7 @@ import re
 from google.genai import types
 from pydantic import BaseModel, Field
 
-from .extract import MODEL, get_client
+from .extract import MODEL, get_client, grade_label
 
 PHONE = re.compile(r"(\+?994|\b0)\s*\(?(10|50|51|55|60|70|77|99|12)\)?[\s-]*\d{3}[\s-]*\d{2}[\s-]*\d{2}")
 EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+")
@@ -73,11 +73,11 @@ class Answer(BaseModel):
     grounded: bool = Field(description="Cavab dərslikdəki qayda və üsullara uyğundur, onlara zidd deyil")
 
 
-ANSWER_PROMPT = """Sən 5-ci sinif şagirdinə «{concept}» mövzusunu izah edən mehriban müəllimsən.
+ANSWER_PROMPT = """Sən {grade} sinif şagirdinə «{concept}» mövzusunu izah edən mehriban müəllimsən.
 Aşağıdakı dərslik səhifələrindəki qayda və üsullara əsaslanaraq şagirdin sualına qısa cavab ver ("sən" deyə müraciət et).
 - Sual dərslikdə hərfi yazılmayıbsa da (məs. "necə tez tapım?"), dərslikdəki qaydalardan çıxış edərək
-  5-ci sinif səviyyəsində məsləhət verə bilərsən. Bu halda grounded=true.
-- grounded=false YALNIZ o halda: cavab üçün dərslikdə olmayan, 5-ci sinifdən yuxarı və ya dərsliyə zidd bir şey lazımdırsa.
+  {grade} sinif səviyyəsində məsləhət verə bilərsən. Bu halda grounded=true.
+- grounded=false YALNIZ o halda: cavab üçün dərslikdə olmayan, bu sinifdən yuxarı və ya dərsliyə zidd bir şey lazımdırsa.
 - Hazır ev tapşırığı həlli vermə, yolu izah et.
 
 Dərslik səhifələri:
@@ -87,11 +87,11 @@ Dərslik səhifələri:
 <<<{question}>>>"""
 
 
-def answer_question(question, concept, pages):
+def answer_question(question, concept, pages, grade=5):
     page_text = "\n\n".join(f"[Səhifə {p['page']}]\n{p['text'][:1800]}" for p in pages) or "(tapılmadı)"
     resp = get_client().models.generate_content(
         model=MODEL,
-        contents=ANSWER_PROMPT.format(concept=concept, pages=page_text, question=question.replace(">>>", "")),
+        contents=ANSWER_PROMPT.format(grade=grade_label(grade), concept=concept, pages=page_text, question=question.replace(">>>", "")),
         config=types.GenerateContentConfig(response_mime_type="application/json",
                                            response_schema=Answer, temperature=0.2),
     )

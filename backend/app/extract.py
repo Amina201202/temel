@@ -109,3 +109,9 @@ def extract_graph(filename, data):
         if e.prerequisite in names and e.concept in names and e.prerequisite != e.concept
     ]
     return graph
+
+
+def grade_label(grade: int) -> str:
+    # azerbaycan dilinde sira sayi: 1-ci, 3-cu, 6-ci, 9-cu, 10-cu
+    suffix = {1: "ci", 2: "ci", 3: "cü", 4: "cü", 5: "ci", 6: "cı", 7: "ci", 8: "ci", 9: "cu", 10: "cu", 11: "ci"}
+    return f"{grade}-{suffix.get(grade, 'ci')}"
