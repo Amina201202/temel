@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session, selectinload
@@ -22,6 +22,7 @@ from .diagnosis import MAX_QUESTIONS, build_graph
 from .extract import ExtractionError, extract_graph
 from .models import Attempt, AttemptAnswer, Chapter, ClassSession, Concept, ConceptEdge, QuestionTemplate
 from .questions import build_checked_templates, build_instance
+from .teacher import router as teacher_router
 from .schemas import (AnswerIn, AttemptIn, AttemptStep, ChapterOut, ConceptOut, EdgeOut, Feedback, GraphOut,
                       OptionOut, PublicQuestion, QuestionOut, QuestionStats, StatusIn)
 
@@ -61,6 +62,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Təməl API", lifespan=lifespan)
+app.include_router(teacher_router)
 
 
 def chapter_out(ch: Chapter) -> ChapterOut:
@@ -426,6 +428,21 @@ def public_chapters(db: Session = Depends(get_db)):
         .order_by(Chapter.grade, Chapter.title)
     ).all()
     return [{"id": r[0], "title": r[1], "grade": r[2], "questions": r[3]} for r in rows]
+
+
+@app.get("/qr.svg", include_in_schema=False)
+def qr_svg(text: str):
+    # QR-i ozumuz yaradiriq: mekteb wi-fi-si CDN-i bloklasa da isleyir
+    if len(text) > 300:
+        raise HTTPException(400, "Mətn çox uzundur")
+    import io
+
+    import qrcode
+    import qrcode.image.svg
+    img = qrcode.make(text, image_factory=qrcode.image.svg.SvgPathImage, box_size=12, border=2)
+    buf = io.BytesIO()
+    img.save(buf)
+    return Response(buf.getvalue(), media_type="image/svg+xml")
 
 
 # sagird tetbiqi: html/css/js, eyni serverden (CORS lazim olmur)

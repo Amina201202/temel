@@ -10,3 +10,4 @@ sympy
 langgraph
 langgraph-checkpoint-postgres
 psycopg[binary,pool]
+qrcode

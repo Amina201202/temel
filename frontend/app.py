@@ -7,11 +7,36 @@ API_URL = os.getenv("API_URL", "http://localhost:8000")
 
 st.set_page_config(page_title="Təməl · Admin", layout="wide")
 
+ADMIN_KEY = os.getenv("ADMIN_PASSWORD", "")
+
 with st.sidebar:
     st.title("Təməl")
     st.caption("Sənin bilik radarın")
     st.divider()
     st.markdown("**Admin paneli**")
+    st.markdown("[Şagird tətbiqi](http://localhost:8010/app/) · [Müəllim paneli](http://localhost:8010/app/teacher.html)")
+    st.divider()
+    st.markdown("**Müəllim hesabları**")
+    with st.form("new_teacher", clear_on_submit=True):
+        t_name = st.text_input("Ad", placeholder="Səbinə müəllim")
+        t_user = st.text_input("İstifadəçi adı", placeholder="sebine (kiçik hərf, rəqəm)")
+        t_ok = st.form_submit_button("Hesab yarat")
+    if t_ok:
+        r = requests.post(f"{API_URL}/admin/teachers", headers={"X-Admin-Key": ADMIN_KEY},
+                          json={"name": t_name, "username": t_user.strip().lower()}, timeout=15)
+        if r.ok:
+            t = r.json()
+            st.success("Hesab yaradıldı. Şifrəni indi köçür, bir daha göstərilməyəcək:")
+            st.code(f"İstifadəçi: {t['username']}\nŞifrə: {t['password']}")
+        else:
+            st.error(r.json().get("detail", r.text) if r.headers.get("content-type", "").startswith("application/json") else r.text)
+    try:
+        teachers = requests.get(f"{API_URL}/admin/teachers", headers={"X-Admin-Key": ADMIN_KEY}, timeout=10)
+        if teachers.ok:
+            for t in teachers.json():
+                st.caption(f"• {t['name']} ({t['username']})")
+    except requests.RequestException:
+        pass
 
 
 def api_get(path):

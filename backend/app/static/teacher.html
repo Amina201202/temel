@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="az">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Təməl — Müəllim paneli</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="teacher.css">
+</head>
+<body>
+
+<header class="bar">
+  <div class="brand">
+    <svg viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="11" fill="#3D4BE0"/><circle cx="20" cy="20" r="12" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width="2"/><circle cx="20" cy="20" r="6.5" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="2"/><path d="M20 20L28.5 11.5" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><circle cx="20" cy="20" r="2.4" fill="#fff"/><circle cx="25" cy="26" r="2" fill="#fff"/></svg>
+    <div><b>Təməl</b><span>Müəllim paneli</span></div>
+  </div>
+  <div id="who" class="who" hidden>
+    <span id="who-name"></span>
+    <button id="logout-btn" class="btn ghost small" type="button">Çıxış</button>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- giris -->
+  <section id="view-login" class="view" hidden>
+    <form id="login-form" class="card login" novalidate>
+      <h1>Daxil ol</h1>
+      <label class="field"><span>İstifadəçi adı</span><input id="username" type="text" autocomplete="username" required></label>
+      <label class="field"><span>Şifrə</span><input id="password" type="password" autocomplete="current-password" required></label>
+      <p id="login-error" class="error" hidden></p>
+      <button class="btn primary" type="submit">Daxil ol</button>
+      <p class="muted small">Hesabı admin yaradır. Şifrəni bilmirsənsə, adminə yaz.</p>
+    </form>
+  </section>
+
+  <!-- sessiyalar -->
+  <section id="view-home" class="view" hidden>
+    <div class="grid-2">
+      <form id="new-session" class="card stack">
+        <h2>Yeni sessiya</h2>
+        <label class="field"><span>Sinif</span><input id="class-name" type="text" maxlength="40" placeholder="məs. 5B" required></label>
+        <label class="field"><span>Mövzu</span><select id="chapter-select"></select></label>
+        <p id="new-error" class="error" hidden></p>
+        <button class="btn primary" type="submit">Sessiya aç və kodu göstər</button>
+      </form>
+      <div class="card stack">
+        <h2>Necə işləyir?</h2>
+        <ol class="how">
+          <li>Sessiya aç, ekranda kod və QR çıxacaq.</li>
+          <li>Şagirdlər telefonda kodu yazır və ya QR-ı skan edir.</li>
+          <li>Onlar test keçdikcə radar canlı yenilənir.</li>
+          <li>Sonda sinfin kök boşluqlarını və tövsiyəni görürsən.</li>
+        </ol>
+      </div>
+    </div>
+    <h2 class="title">Sessiyalarım</h2>
+    <div id="session-list" class="stack"></div>
+  </section>
+
+  <!-- canli radar -->
+  <section id="view-session" class="view" hidden>
+    <div class="row between">
+      <button id="back-btn" class="btn ghost small" type="button">← Sessiyalar</button>
+      <div class="row gap">
+        <span id="live-dot" class="live">● Canlı</span>
+        <button id="close-btn" class="btn ghost small" type="button">Sessiyanı bağla</button>
+      </div>
+    </div>
+
+    <div class="grid-top">
+      <div class="card join">
+        <div class="join-text">
+          <span class="muted">Qoşulma kodu</span>
+          <div id="join-code" class="code"></div>
+          <span id="join-url" class="url"></span>
+          <p id="local-warn" class="warn small" hidden>Telefonlar "localhost"-u aça bilmir. Bu səhifəni Mac-in IP ünvanı ilə aç: məs. http://192.168.1.5:8010/app/teacher.html</p>
+        </div>
+        <div id="qr" class="qr"></div>
+      </div>
+      <div class="stats">
+        <div class="stat"><b id="st-joined">0</b><span>qoşuldu</span></div>
+        <div class="stat"><b id="st-done">0</b><span>bitirdi</span></div>
+        <div class="stat"><b id="st-progress">0</b><span>davam edir</span></div>
+        <div class="stat good"><b id="st-nogap">0</b><span>boşluqsuz</span></div>
+      </div>
+    </div>
+
+    <div id="advice" class="advice"></div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="row between"><h2>Sinif radarı</h2><span id="session-title" class="muted small"></span></div>
+        <div class="legend">
+          <span><i class="dot root"></i>Kök səbəb</span><span><i class="dot weak"></i>Zəif</span>
+          <span><i class="dot known"></i>Bilir</span><span><i class="dot unknown"></i>Yoxlanmadı</span>
+        </div>
+        <div id="bars" class="bars"></div>
+      </div>
+      <div class="card">
+        <h2>Ən çox rast gəlinən səhvlər</h2>
+        <div id="mistakes" class="stack"></div>
+      </div>
+    </div>
+
+    <h2 class="title">Şagirdlər</h2>
+    <div id="students" class="students"></div>
+  </section>
+</main>
+
+<dialog id="detail">
+  <div class="row between"><h2 id="d-name"></h2><button id="d-close" class="btn ghost small" type="button">Bağla</button></div>
+  <div id="d-body"></div>
+</dialog>
+
+<script src="teacher.js"></script>
+</body>
+</html>

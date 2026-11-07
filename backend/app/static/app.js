@@ -308,6 +308,12 @@ $("restart-btn").onclick = () => { clearAttempt(); attempt = null; show("screen-
 
 (async function init() {
   loadChapters();
+  // QR-dan gelende kod linkde olur: /app/?code=4821
+  const code = new URLSearchParams(location.search).get("code");
+  if (code) {
+    $("join-code").value = code;
+    $("chapter-field").hidden = true;
+  }
   const saved = loadAttempt();
   if (saved) {
     try {
