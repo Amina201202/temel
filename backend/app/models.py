@@ -82,3 +82,58 @@ class QuestionTemplate(Base):
             "distractors": self.distractors,
             "text": self.text,
         }
+
+
+class Teacher(Base):
+    __tablename__ = "teachers"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(120))
+    username: Mapped[str] = mapped_column(String(60), unique=True)
+    password_hash: Mapped[str] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ClassSession(Base):
+    """Muellimin acdigi sessiya: 4 reqemli kodla sagirdler qosulur."""
+    __tablename__ = "class_sessions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    teacher_id: Mapped[int | None] = mapped_column(ForeignKey("teachers.id", ondelete="CASCADE"), nullable=True)
+    chapter_id: Mapped[int] = mapped_column(ForeignKey("chapters.id", ondelete="CASCADE"))
+    class_name: Mapped[str] = mapped_column(String(40))
+    join_code: Mapped[str] = mapped_column(String(8), index=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Attempt(Base):
+    """Bir sagirdin bir test kecmesi. LangGraph thread_id = attempt-<id>."""
+    __tablename__ = "attempts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # sagird bu token olmadan cavab gondere bilmez
+    token: Mapped[str] = mapped_column(String(64), unique=True)
+    chapter_id: Mapped[int] = mapped_column(ForeignKey("chapters.id", ondelete="CASCADE"))
+    session_id: Mapped[int | None] = mapped_column(ForeignKey("class_sessions.id", ondelete="SET NULL"), nullable=True)
+    nickname: Mapped[str] = mapped_column(String(30))
+    status: Mapped[str] = mapped_column(String(20), default="in_progress")
+    diagnosis: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class AttemptAnswer(Base):
+    __tablename__ = "attempt_answers"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    attempt_id: Mapped[int] = mapped_column(ForeignKey("attempts.id", ondelete="CASCADE"), index=True)
+    template_id: Mapped[int | None] = mapped_column(ForeignKey("question_templates.id", ondelete="SET NULL"), nullable=True)
+    concept: Mapped[str] = mapped_column(String(200))
+    question_text: Mapped[str] = mapped_column(Text)
+    chosen: Mapped[str] = mapped_column(String(60))
+    correct_value: Mapped[str] = mapped_column(String(60))
+    correct: Mapped[bool] = mapped_column(Boolean)
+    misconception: Mapped[str | None] = mapped_column(Text, nullable=True)
+    points_to: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    answered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

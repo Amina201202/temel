@@ -64,3 +64,38 @@ class QuestionStats(BaseModel):
     needs_review: int
     approved: int
     rejected: int
+
+
+class AttemptIn(BaseModel):
+    nickname: str
+    chapter_id: int | None = None
+    join_code: str | None = None
+
+
+class AnswerIn(BaseModel):
+    token: str
+    value: str
+
+
+class PublicQuestion(BaseModel):
+    number: int
+    max: int
+    concept: str
+    text: str
+    options: list[str]
+
+
+class Feedback(BaseModel):
+    # evvelki suala qisa geri bildirim (duz/sehv, sehvin menasi)
+    correct: bool
+    correct_value: str
+    misconception: str | None = None
+
+
+class AttemptStep(BaseModel):
+    attempt_id: int
+    token: str
+    done: bool
+    question: PublicQuestion | None = None
+    feedback: Feedback | None = None
+    diagnosis: dict | None = None
