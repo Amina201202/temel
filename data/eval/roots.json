@@ -1,0 +1,230 @@
+{
+  "chapter": "Bölənlər və adi kəsrlər",
+  "profiles": 20,
+  "runs": 100,
+  "seeds_per_profile": 5,
+  "student_model": {
+    "slip": 0.1,
+    "guess": 0.15,
+    "testable_concepts": 14,
+    "untestable": []
+  },
+  "summary": {
+    "Təməl (adaptiv)": {
+      "accuracy": 0.54,
+      "avg_questions": 11.0
+    },
+    "Adi test (sadə sayma)": {
+      "accuracy": 0.22,
+      "avg_questions": 13.9
+    },
+    "Adi test + qraf qaydası": {
+      "accuracy": 0.26,
+      "avg_questions": 13.9
+    }
+  },
+  "temel_by_type": {
+    "1 bosluq": "42/70",
+    "bosluq yoxdur": "10/15",
+    "2 bosluq": "2/15"
+  },
+  "temel_ms_per_test": 42.7,
+  "errors": [
+    {
+      "gaps": [
+        "Ədədin böləni"
+      ],
+      "truth": [
+        "Ədədin böləni"
+      ],
+      "temel": [
+        "Kəsrlərin çıxılması"
+      ],
+      "temel_questions": 12,
+      "naive": [
+        "Qarışıq ədədlərin çıxılması"
+      ],
+      "graph": [
+        "Ədədin bölünəni",
+        "Ədədin böləni"
+      ]
+    },
+    {
+      "gaps": [
+        "Ədədin böləni"
+      ],
+      "truth": [
+        "Ədədin böləni"
+      ],
+      "temel": [
+        "ƏBOB"
+      ],
+      "temel_questions": 12,
+      "naive": [
+        "Ədədin böləni"
+      ],
+      "graph": [
+        "Qarışıq ədədlərin çıxılması",
+        "Ədədin böləni"
+      ]
+    },
+    {
+      "gaps": [
+        "Ədədin böləni"
+      ],
+      "truth": [
+        "Ədədin böləni"
+      ],
+      "temel": [
+        "Kəsrlərin toplanması"
+      ],
+      "temel_questions": 12,
+      "naive": [
+        "Kəsrlərin çıxılması"
+      ],
+      "graph": [
+        "Düzgün olmayan kəsrlər",
+        "Kəsrlərin çıxılması",
+        "Ədədin böləni"
+      ]
+    },
+    {
+      "gaps": [
+        "Ədədin bölünəni"
+      ],
+      "truth": [
+        "Ədədin bölünəni"
+      ],
+      "temel": [
+        "ƏKOB"
+      ],
+      "temel_questions": 12,
+      "naive": [
+        "ƏKOB"
+      ],
+      "graph": [
+        "Ədədin bölünəni"
+      ]
+    },
+    {
+      "gaps": [
+        "Ədədin bölünəni"
+      ],
+      "truth": [
+        "Ədədin bölünəni"
+      ],
+      "temel": [
+        "Kəsrlərin toplanması"
+      ],
+      "temel_questions": 12,
+      "naive": [
+        "Kəsrlərin çıxılması"
+      ],
+      "graph": [
+        "Kəsrlərin ixtisarı",
+        "Ədədin bölünəni"
+      ]
+    },
+    {
+      "gaps": [
+        "ƏBOB"
+      ],
+      "truth": [
+        "ƏBOB"
+      ],
+      "temel": [
+        "Kəsrlərin çıxılması",
+        "Qarışıq ədədlərin toplanması"
+      ],
+      "temel_questions": 12,
+      "naive": [
+        "Qarışıq ədədlərin çıxılması"
+      ],
+      "graph": [
+        "Kəsrlərin toplanması",
+        "Kəsrlərin çıxılması",
+        "ƏBOB"
+      ]
+    },
+    {
+      "gaps": [
+        "ƏBOB"
+      ],
+      "truth": [
+        "ƏBOB"
+      ],
+      "temel": [
+        "Kəsrlərin toplanması",
+        "Qarışıq ədədlərin çıxılması"
+      ],
+      "temel_questions": 12,
+      "naive": [
+        "Qarışıq ədədi düzgün olmayan kəsrə çevirmə"
+      ],
+      "graph": [
+        "Kəsrlərin toplanması",
+        "Kəsrlərin çıxılması",
+        "Qarışıq ədədi düzgün olmayan kəsrə çevirmə",
+        "ƏBOB"
+      ]
+    },
+    {
+      "gaps": [
+        "ƏBOB"
+      ],
+      "truth": [
+        "ƏBOB"
+      ],
+      "temel": [
+        "Kəsrlərin ixtisarı"
+      ],
+      "temel_questions": 12,
+      "naive": [
+        "Düzgün olmayan kəsri qarışıq ədədə çevirmə"
+      ],
+      "graph": [
+        "Düzgün olmayan kəsri qarışıq ədədə çevirmə",
+        "ƏBOB"
+      ]
+    },
+    {
+      "gaps": [
+        "ƏBOB"
+      ],
+      "truth": [
+        "ƏBOB"
+      ],
+      "temel": [
+        "Kəsrlərin çıxılması",
+        "Qarışıq ədədlərin toplanması"
+      ],
+      "temel_questions": 11,
+      "naive": [
+        "Kəsrlərin ixtisarı"
+      ],
+      "graph": [
+        "ƏBOB"
+      ]
+    },
+    {
+      "gaps": [
+        "ƏKOB"
+      ],
+      "truth": [
+        "ƏKOB"
+      ],
+      "temel": [
+        "Kəsrlərin toplanması"
+      ],
+      "temel_questions": 12,
+      "naive": [
+        "Kəsrlərin toplanması"
+      ],
+      "graph": [
+        "Düzgün olmayan kəsrlər",
+        "Kəsrlərin ixtisarı",
+        "Kəsrlərin müqayisəsi"
+      ]
+    }
+  ]
+}

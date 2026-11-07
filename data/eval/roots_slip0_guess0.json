@@ -1,0 +1,53 @@
+{
+  "chapter": "Bölənlər və adi kəsrlər",
+  "profiles": 20,
+  "runs": 100,
+  "seeds_per_profile": 5,
+  "student_model": {
+    "slip": 0.0,
+    "guess": 0.0,
+    "testable_concepts": 14,
+    "untestable": []
+  },
+  "summary": {
+    "Təməl (adaptiv)": {
+      "accuracy": 0.99,
+      "root_found": 0.988,
+      "avg_questions": 9.8
+    },
+    "Adi test (sadə sayma)": {
+      "accuracy": 0.38,
+      "root_found": 0.271,
+      "avg_questions": 13.9
+    },
+    "Adi test + qraf qaydası": {
+      "accuracy": 0.98,
+      "root_found": 1.0,
+      "avg_questions": 13.9
+    }
+  },
+  "temel_by_type": {
+    "1 bosluq": "69/70",
+    "bosluq yoxdur": "15/15",
+    "2 bosluq": "15/15"
+  },
+  "temel_ms_per_test": 40.8,
+  "errors": [
+    {
+      "gaps": [
+        "Qarışıq ədədlərin çıxılması"
+      ],
+      "truth": [
+        "Qarışıq ədədlərin çıxılması"
+      ],
+      "temel": [],
+      "temel_questions": 6,
+      "naive": [
+        "Qarışıq ədədlərin çıxılması"
+      ],
+      "graph": [
+        "Qarışıq ədədlərin çıxılması"
+      ]
+    }
+  ]
+}

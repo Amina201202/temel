@@ -1,0 +1,8 @@
+{
+  "questions": 48,
+  "deterministic_check_pass": "48/48",
+  "avg_clear": 4.98,
+  "one_correct": "48/48",
+  "avg_realistic": 4.62,
+  "grade_ok": "48/48"
+}

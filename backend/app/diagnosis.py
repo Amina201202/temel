@@ -24,7 +24,7 @@ class DiagState(TypedDict, total=False):
     prereqs: dict[str, list[str]]
     templates: dict[str, list[dict]]
     seed: int
-    status: dict[str, str]  # known | implied | weak | untested
+    status: dict[str, str]  # known | implied | weak | weak_implied | untested
     stack: list[str]
     retried: list[str]
     confirmed: list[str]
@@ -68,8 +68,21 @@ def pick(state: DiagState):
     if len(state["asked"]) >= MAX_QUESTIONS:
         return {"done": True, "current": None, "stack": stack, "status": status}
 
+    retried = list(state["retried"])
     while True:
         if not stack:
+            # bitirmeden evvel: yalniz 1 sehv cavaba esaslanan kok namizedini yeniden yoxlayiriq
+            # (tesadufi sehv saxta kok yaratmasin)
+            prereqs = state["prereqs"]
+            cands = [c for c in state["concepts"]
+                     if status.get(c) == "weak" and c not in retried and state["templates"].get(c)
+                     and all(status.get(p) in ("known", "implied") for p in prereqs.get(c, []))]
+            if cands:
+                c = cands[0]
+                retried.append(c)
+                status.pop(c)
+                stack.append(c)
+                continue
             # cox tez bitdise, "bilir sayilan" movzulardan birini yoxlayiriq
             if len(state["asked"]) >= MIN_QUESTIONS:
                 break
@@ -82,7 +95,7 @@ def pick(state: DiagState):
             stack.append(spot[0])
 
         c = stack.pop(0)
-        if status.get(c) in ("known", "implied", "weak", "untested"):
+        if status.get(c) in ("known", "implied", "weak", "weak_implied", "untested"):
             continue
         all_tpls = state["templates"].get(c, [])
         fresh = [t for t in all_tpls if t["id"] not in used] or all_tpls
@@ -98,9 +111,10 @@ def pick(state: DiagState):
         used.append(tpl["id"])
         current = {"concept": c, "template_id": tpl["id"], "difficulty": tpl["difficulty"],
                    "text": inst["text"], "options": inst["options"]}
-        return {"current": current, "stack": stack, "status": status, "used_templates": used, "done": False}
+        return {"current": current, "stack": stack, "status": status, "used_templates": used,
+                "retried": retried, "done": False}
 
-    return {"done": True, "current": None, "stack": stack, "status": status}
+    return {"done": True, "current": None, "stack": stack, "status": status, "retried": retried}
 
 
 def ask(state: DiagState):
@@ -147,6 +161,13 @@ def grade(state: DiagState):
         stack.insert(0, c)
     elif correct:
         status[c] = "known"
+        # tekrar yoxlamada duz cavab verdise, onun ucun "zeif" sayilan movzulari yeniden acmaq lazimdir
+        for d in state["concepts"]:
+            if status.get(d) == "weak_implied":
+                still = any(status.get(a) in ("weak", "weak_implied") for a in ancestors(d, state["prereqs"]))
+                if not still:
+                    status.pop(d)
+                    stack.append(d)
         history = state["asked"] + [record]
         hard_ok = any(a["concept"] == c and a["correct"] and a["difficulty"] >= 2 for a in history)
         if hard_ok:
@@ -161,12 +182,24 @@ def grade(state: DiagState):
     else:
         prs = state["prereqs"].get(c, [])
         pt = record["points_to"]
-        if pt not in prs and c not in retried:
-            # sehv oz movzusundadir - tesadufi ola biler, bir defe de baxaq
+        # bu sehv movcud zeiflikle elaqelidirmi? (qrafda yuxarida ve ya asagida sehv var)
+        wrong_before = {a["concept"] for a in state["asked"] if not a["correct"]}
+        wrong_before |= {x for x, st in status.items() if st in ("weak", "weak_implied")}
+        family = ancestors(c, state["prereqs"]) | {d for d in state["concepts"] if c in ancestors(d, state["prereqs"])}
+        related = bool(family & wrong_before)
+        is_leaf = not prs  # en asagi movzu: sehv olsa birbasa kok elan olunur
+        if pt not in prs and c not in retried and (not related or is_leaf):
+            # elaqesiz sehv tesadufi ola biler; en asagi movzuda ise sehvin qiymeti boyukdur
+            # - her iki halda bir defe de yoxlayiriq
             retried.append(c)
             stack.insert(0, c)
         else:
             status[c] = "weak"
+            # bu movzunu bilmirse, ona soykenen movzulari da bilmir - sual vermeye ehtiyac yoxdur
+            for d in state["concepts"]:
+                if status.get(d) is None and c in ancestors(d, state["prereqs"]):
+                    status[d] = "weak_implied"
+            stack = [x for x in stack if status.get(x) != "weak_implied"]
             # evvelce sehvin gosterdiyi movzuya, sonra qalanlarina enirik
             order = ([pt] if pt in prs else []) + [p for p in prs if p != pt]
             down = [p for p in order if status.get(p) is None]
@@ -178,10 +211,12 @@ def grade(state: DiagState):
 
 def diagnose(state: DiagState):
     status, prereqs = state["status"], state["prereqs"]
-    weak = [c for c in state["concepts"] if status.get(c) == "weak"]
-    # kok sebeb: zeifdir, amma onun evvelki movzularinda zeiflik yoxdur
-    roots = [c for c in weak if not any(status.get(p) == "weak" for p in prereqs.get(c, []))]
-    because = {c: [p for p in prereqs.get(c, []) if status.get(p) == "weak"] for c in weak if c not in roots}
+    weak_like = ("weak", "weak_implied")
+    weak = [c for c in state["concepts"] if status.get(c) in weak_like]
+    # kok sebeb: sualla tesdiqlenmis zeiflikdir ve evvelki movzularinda zeiflik yoxdur
+    roots = [c for c in weak if status.get(c) == "weak"
+             and not any(status.get(p) in weak_like for p in prereqs.get(c, []))]
+    because = {c: [p for p in prereqs.get(c, []) if status.get(p) in weak_like] for c in weak if c not in roots}
     # kokun altinda yoxlanmamis movzu qalibsa, bunu demeliyik
     unchecked_below = {r: [p for p in prereqs.get(r, []) if status.get(p) in (None, "untested")] for r in roots}
 
@@ -199,7 +234,7 @@ def diagnose(state: DiagState):
         s = status.get(c)
         if c in roots:
             concept_map[c] = "root"
-        elif s == "weak":
+        elif s in weak_like:
             concept_map[c] = "weak"
         elif s in ("known", "implied"):
             concept_map[c] = "known"
