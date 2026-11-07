@@ -153,3 +153,15 @@ input[type=text]:focus { outline: 2px solid var(--accent); outline-offset: 1px; 
 .skeleton { height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--line) 25%, #EDEFF5 50%, var(--line) 75%); background-size: 200% 100%; animation: shine 1.2s infinite; }
 @keyframes shine { to { background-position: -200% 0; } }
 .explain .retry { align-self: flex-start; background: none; border: 1px solid var(--line-strong); border-radius: 10px; padding: 8px 12px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+/* sual qutusu */
+.ask { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.ask label { font-size: 14px; }
+.ask-row { display: flex; gap: 8px; }
+.ask-row input { flex: 1; min-width: 0; }
+.btn.small { height: 46px; width: auto; padding: 0 16px; font-size: 15px; border-radius: 12px; }
+.qa { border-radius: 12px; padding: 10px 12px; font-size: 14px; line-height: 1.5; }
+.qa.q { background: var(--bg); font-weight: 600; }
+.qa.a { background: var(--accent-soft); color: #1E268F; }
+.qa.blocked { background: var(--warn-soft); color: var(--warn); }
+.qa small { display: block; margin-top: 4px; color: var(--muted); font-weight: 400; }

@@ -22,6 +22,8 @@ from .db import Base, engine, get_db
 from .diagnosis import MAX_QUESTIONS, build_graph
 from .explain import generate_explanation
 from .rag import ensure_index, search
+from .guard import EMAIL, PHONE, GuardBlock, answer_question, check_input
+from .auth import store
 from .extract import ExtractionError, extract_graph
 from .models import Attempt, AttemptAnswer, Chapter, ClassSession, Concept, ConceptEdge, QuestionTemplate
 from .questions import build_checked_templates, build_instance
@@ -70,6 +72,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Təməl API", lifespan=lifespan)
 app.include_router(teacher_router)
+
+
+@app.middleware("http")
+async def no_stale_static(request, call_next):
+    # brauzer kohne app.js-i kesden gostermesin: her defe serverden yoxlasin (304 ile ucuzdur)
+    response = await call_next(request)
+    if request.url.path.startswith("/app"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 def chapter_out(ch: Chapter) -> ChapterOut:
@@ -375,6 +386,8 @@ def start_attempt(body: AttemptIn, db: Session = Depends(get_db)):
     nickname = body.nickname.strip()
     if not NICK_RE.match(nickname):
         raise HTTPException(400, "Ləqəb 2-20 simvol olmalıdır (hərf, rəqəm, boşluq, _ . -)")
+    if PHONE.search(nickname) or EMAIL.search(nickname) or sum(ch.isdigit() for ch in nickname) >= 7:
+        raise HTTPException(400, "Ləqəbdə telefon nömrəsi kimi şəxsi məlumat yazma")
 
     session_id = None
     chapter_id = body.chapter_id
@@ -473,6 +486,52 @@ def attempt_explanation(attempt_id: int, body: TokenIn, db: Session = Depends(ge
     attempt.diagnosis = {**d, "explanation": exp}  # JSON sutunu yeniden menimsedirik ki, saxlansin
     db.commit()
     return {"explanation": exp}
+
+
+class AskIn(BaseModel):
+    token: str
+    question: str
+
+
+ASK_LIMIT = 5
+
+
+@app.post("/attempts/{attempt_id}/ask")
+def ask_question(attempt_id: int, body: AskIn, db: Session = Depends(get_db)):
+    attempt = get_attempt(db, attempt_id, body.token)
+    d = attempt.diagnosis
+    if attempt.status != "done" or not d or not d["roots"]:
+        raise HTTPException(409, "Sual vermək üçün əvvəlcə testi bitir")
+
+    # bir test ucun en cox 5 sual (xerc limiti)
+    key = f"ask:{attempt.id}"
+    used = int(store().get(key) or 0)
+    if used >= ASK_LIMIT:
+        raise HTTPException(429, f"Bu test üçün {ASK_LIMIT} sual limiti doldu. Qalanını müəllimindən soruş.")
+
+    # bloklanan cehdler de AI cagirisi edir - onlari da limitleyirik (spam olmasin)
+    tries = store().incr(f"ask_try:{attempt.id}")
+    if tries == 1:
+        store().expire(f"ask_try:{attempt.id}", 24 * 3600)
+    if tries > ASK_LIMIT * 3:
+        raise HTTPException(429, "Çox cəhd oldu. Sabah yenidən yoxla.")
+
+    concept = d["roots"][0]
+    try:
+        question = check_input(body.question, concept)
+        store().setex(key, 24 * 3600, used + 1)
+        # movzunun oz sehifesi + suala en uygun sehifeler (tekrarsiz)
+        pages = search(db, attempt.chapter_id, concept, k=1)
+        for extra in search(db, attempt.chapter_id, f"{concept}. {question}", k=3):
+            if extra["page"] not in {x["page"] for x in pages} and len(pages) < 3:
+                pages.append(extra)
+        ans = answer_question(question, concept, pages)
+    except GuardBlock as g:
+        store().incr(f"guard:{g.rail}")  # neçə defe hansi qoruma isledi - statistikaya
+        logger.info("guard block rail=%s attempt=%s", g.rail, attempt.id)
+        raise HTTPException(400, g.message) from g
+    store().incr("guard:passed")
+    return {"answer": ans["answer"], "source_page": ans["source_page"], "left": ASK_LIMIT - used - 1}
 
 
 @app.get("/attempts/{attempt_id}", response_model=AttemptStep)

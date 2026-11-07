@@ -81,6 +81,14 @@
     </div>
     <div id="map-roots"></div>
     <div id="explain" class="explain" hidden></div>
+    <form id="ask-form" class="ask" hidden>
+      <label for="ask-input"><b>Sualın var?</b> <span class="muted" id="ask-topic"></span></label>
+      <div class="ask-row">
+        <input id="ask-input" type="text" maxlength="300" autocomplete="off" placeholder="məs. ƏKOB-u necə tez tapım?">
+        <button class="btn primary small" type="submit">Soruş</button>
+      </div>
+      <div id="ask-answers" class="stack"></div>
+    </form>
     <h2 class="section-title">Mövzular</h2>
     <div id="map-list" class="concept-list"></div>
     <div class="legend">

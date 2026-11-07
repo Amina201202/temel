@@ -255,12 +255,39 @@ async function loadExplanation(d) {
       <div class="box"><b>Nümunə</b>${mathHtml(e.example)}</div>
       <div class="tip">💡 ${mathHtml(e.tip)}</div>
       ${e.source_page ? `<span class="src">Mənbə: Riyaziyyat 5, səh. ${e.source_page}</span>` : ""}`;
+    $("ask-topic").textContent = `(yalnız «${d.roots[0]}» haqqında)`;
+    $("ask-form").hidden = false;
   } catch (err) {
     box.innerHTML = `<span class="ai">İzah</span><p class="muted">${esc(err.message)}</p>
       <button class="retry" type="button">Yenidən cəhd et</button>`;
     box.querySelector(".retry").onclick = () => loadExplanation(d);
   }
 }
+
+$("ask-form").onsubmit = async (ev) => {
+  ev.preventDefault();
+  const input = $("ask-input");
+  const q = input.value.trim();
+  if (!q || !attempt) return;
+  const box = $("ask-answers");
+  const qEl = document.createElement("div");
+  qEl.className = "qa q";
+  qEl.textContent = q;
+  const aEl = document.createElement("div");
+  aEl.className = "qa a";
+  aEl.innerHTML = `<div class="skeleton" style="width:70%"></div>`;
+  box.prepend(aEl);
+  box.prepend(qEl);
+  input.value = "";
+  try {
+    const r = await api("POST", `/attempts/${attempt.attempt_id}/ask`, { token: attempt.token, question: q });
+    aEl.innerHTML = mathHtml(r.answer) +
+      `<small>${r.source_page ? `Mənbə: səh. ${r.source_page} · ` : ""}${r.left} sual qaldı</small>`;
+  } catch (e) {
+    aEl.className = "qa blocked";
+    aEl.textContent = e.message;
+  }
+};
 
 $("plan-btn").onclick = () => { renderPlan(lastDiagnosis); show("screen-plan"); };
 $("back-map-btn").onclick = () => show("screen-map");
