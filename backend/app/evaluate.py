@@ -271,6 +271,42 @@ def eval_judge():
     print("\nIndi data/eval/judge.csv-ni ac ve 15 sual ucun human_clear (1-5) ve human_one_correct (yes/no) doldur.")
 
 
+# ---------------- 2b. insan qiymeti (terminalda) ----------------
+
+def eval_rate(limit=15):
+    path = OUT / "judge.csv"
+    rows = list(csv.DictReader(open(path, encoding="utf-8")))
+    # her movzudan bir sual olsun deye qarisdiririq, sonra ilk 15
+    todo = [r for r in rows if not r["human_clear"].strip()]
+    rated = len(rows) - len(todo)
+    print(f"Indiye qeder {rated} sual qiymetlendirilib. Hedef: {limit}. Cixmaq ucun 'q' yaz.\n")
+    for r in todo:
+        if rated >= limit:
+            break
+        print("=" * 60)
+        print(f"[{rated + 1}/{limit}] Movzu: {r['concept']}")
+        print(f"Sual: {r['question']}")
+        print(f"Variantlar: {r['options']}")
+        print(f"Duz cavab (sistem deyir): {r['correct']}")
+        clear = input("1) Sual ne qeder aydindir? (1-5): ").strip()
+        if clear.lower() == "q":
+            break
+        while clear not in ("1", "2", "3", "4", "5"):
+            clear = input("   1-den 5-e qeder reqem yaz: ").strip()
+        one = input("2) Yalniz BIR duz cavab var ve o, yuxaridaki cavabdir? (yes/no): ").strip().lower()
+        while one not in ("yes", "no", "y", "n"):
+            one = input("   yes ve ya no yaz: ").strip().lower()
+        r["human_clear"] = clear
+        r["human_one_correct"] = "yes" if one.startswith("y") else "no"
+        rated += 1
+        # her cavabdan sonra yaziriq ki, yarida cixsan da itmesin
+        with open(path, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+            w.writeheader()
+            w.writerows(rows)
+    print(f"\nSaxlanildi: {rated} sual. Indi isle: python -m app.evaluate agreement")
+
+
 # ---------------- 3. insan vs judge ----------------
 
 def eval_agreement():
@@ -290,4 +326,4 @@ def eval_agreement():
 
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "roots"
-    {"roots": eval_roots, "judge": eval_judge, "agreement": eval_agreement}[cmd]()
+    {"roots": eval_roots, "judge": eval_judge, "rate": eval_rate, "agreement": eval_agreement}[cmd]()
