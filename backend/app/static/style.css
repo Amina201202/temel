@@ -140,3 +140,16 @@ input[type=text]:focus { outline: 2px solid var(--accent); outline-offset: 1px; 
 .task { display: flex; align-items: center; gap: 12px; min-height: 44px; font-size: 14px; cursor: pointer; }
 .task input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); flex-shrink: 0; }
 .task.done span { color: var(--muted); text-decoration: line-through; }
+
+/* AI izahi */
+.explain { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+.explain .ai { font-size: 12px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--accent-ink); }
+.explain h3 { margin: 0; font-size: 17px; line-height: 1.35; }
+.explain p { margin: 0; font-size: 14px; line-height: 1.55; }
+.explain .box { background: var(--bg); border-radius: 12px; padding: 10px 12px; font-size: 14px; line-height: 1.55; white-space: pre-line; }
+.explain .box b { display: block; font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+.explain .tip { background: var(--accent-soft); color: #1E268F; border-radius: 12px; padding: 10px 12px; font-size: 14px; font-weight: 600; }
+.explain .src { font-size: 12px; color: var(--muted); }
+.skeleton { height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--line) 25%, #EDEFF5 50%, var(--line) 75%); background-size: 200% 100%; animation: shine 1.2s infinite; }
+@keyframes shine { to { background-position: -200% 0; } }
+.explain .retry { align-self: flex-start; background: none; border: 1px solid var(--line-strong); border-radius: 10px; padding: 8px 12px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }

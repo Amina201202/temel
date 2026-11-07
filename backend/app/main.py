@@ -9,16 +9,19 @@ from datetime import datetime, timezone
 
 from pathlib import Path
 
+from pydantic import BaseModel
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.orm import Session, selectinload
 
 from langgraph.types import Command
 
 from .db import Base, engine, get_db
 from .diagnosis import MAX_QUESTIONS, build_graph
+from .explain import generate_explanation
+from .rag import ensure_index, search
 from .extract import ExtractionError, extract_graph
 from .models import Attempt, AttemptAnswer, Chapter, ClassSession, Concept, ConceptEdge, QuestionTemplate
 from .questions import build_checked_templates, build_instance
@@ -52,6 +55,10 @@ def make_checkpointer():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global GRAPH
+    # pgvector extension cedvellerden evvel lazimdir
+    if engine.dialect.name == "postgresql":
+        with engine.begin() as conn:
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
     # cedveller yoxdursa yaradir (sonra alembic-e kececeyik)
     Base.metadata.create_all(engine)
     saver, pool = make_checkpointer()
@@ -154,6 +161,13 @@ def create_chapter(
             to_concept_id=by_name[e.concept].id,
         ))
     db.commit()
+
+    # RAG ucun sehifeleri index edirik; alinmasa izah zamani yeniden cehd olunacaq
+    try:
+        ensure_index(db, chapter)
+    except Exception:  # noqa: BLE001
+        db.rollback()
+        logger.exception("index alinmadi, chapter=%s", chapter.id)
 
     return load_graph(db, chapter.id)
 
@@ -409,6 +423,56 @@ def answer_attempt(attempt_id: int, body: AnswerIn, db: Session = Depends(get_db
     feedback = Feedback(correct=last["correct"], correct_value=last["correct_value"],
                         misconception=None if last["correct"] else last["misconception"])
     return finish_or_ask(attempt, db, feedback)
+
+
+@app.post("/chapters/{chapter_id}/index")
+def index_chapter(chapter_id: int, db: Session = Depends(get_db)):
+    ch = db.get(Chapter, chapter_id)
+    if ch is None:
+        raise HTTPException(404, "Bölmə tapılmadı")
+    return {"indexed_pages": ensure_index(db, ch)}
+
+
+class TokenIn(BaseModel):
+    token: str
+
+
+@app.post("/attempts/{attempt_id}/explanation")
+def attempt_explanation(attempt_id: int, body: TokenIn, db: Session = Depends(get_db)):
+    attempt = get_attempt(db, attempt_id, body.token)
+    d = attempt.diagnosis
+    if attempt.status != "done" or not d:
+        raise HTTPException(409, "Test hələ bitməyib")
+    if not d["roots"]:
+        return {"explanation": None}
+    if d.get("explanation"):
+        return {"explanation": d["explanation"]}  # bir defe yaradiriq, sonra cache
+
+    root = d["roots"][0]
+    chapter = db.get(Chapter, attempt.chapter_id)
+    concept = db.scalar(select(Concept).where(Concept.chapter_id == chapter.id, Concept.name == root))
+    try:
+        ensure_index(db, chapter)
+        pages = search(db, chapter.id, f"{root}. {concept.description if concept else ''}", k=2)
+    except Exception:  # noqa: BLE001
+        db.rollback()
+        logger.exception("RAG axtarisi alinmadi")
+        pages = []
+
+    wrong = db.scalars(select(AttemptAnswer).where(AttemptAnswer.attempt_id == attempt.id,
+                                                   AttemptAnswer.correct.is_(False))).all()
+    wrong_answers = [{"concept": w.concept, "question": w.question_text, "chosen": w.chosen,
+                      "correct_value": w.correct_value, "misconception": w.misconception} for w in wrong]
+    try:
+        exp = generate_explanation(root, d["weak_because"], wrong_answers, pages)
+    except Exception as e:  # noqa: BLE001
+        logger.exception("izah alinmadi")
+        raise HTTPException(502, "AI izahı hazırlaya bilmədi, bir az sonra yenidən cəhd et") from e
+
+    exp["source_text"] = next((p["text"][:400] for p in pages if p["page"] == exp["source_page"]), None)
+    attempt.diagnosis = {**d, "explanation": exp}  # JSON sutunu yeniden menimsedirik ki, saxlansin
+    db.commit()
+    return {"explanation": exp}
 
 
 @app.get("/attempts/{attempt_id}", response_model=AttemptStep)

@@ -23,7 +23,11 @@ def get_client():
     # client-i bir defe yaradiriq, her requestde yox
     global _client
     if _client is None:
-        _client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+        # yeni google-genai versiyalari default v1 istifade edir, JSON rejimi ise v1beta-dadir
+        _client = genai.Client(
+            api_key=os.environ["GEMINI_API_KEY"],
+            http_options=types.HttpOptions(api_version="v1beta"),
+        )
     return _client
 
 

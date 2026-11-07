@@ -137,3 +137,19 @@ class AttemptAnswer(Base):
     misconception: Mapped[str | None] = mapped_column(Text, nullable=True)
     points_to: Mapped[str | None] = mapped_column(String(200), nullable=True)
     answered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+from pgvector.sqlalchemy import Vector  # noqa: E402
+
+EMBED_DIM = 768
+
+
+class Chunk(Base):
+    """Dersliyin bir sehifesi + embedding (RAG ucun, pgvector-da)."""
+    __tablename__ = "chunks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    chapter_id: Mapped[int] = mapped_column(ForeignKey("chapters.id", ondelete="CASCADE"), index=True)
+    page: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    text: Mapped[str] = mapped_column(Text)
+    embedding = mapped_column(Vector(EMBED_DIM))

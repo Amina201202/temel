@@ -128,6 +128,7 @@ function renderStep(step) {
     lastDiagnosis = step.diagnosis;
     renderMap(step.diagnosis);
     show("screen-map");
+    loadExplanation(step.diagnosis);
     return;
   }
   renderQuestion(step.question);
@@ -235,6 +236,30 @@ function renderMap(d) {
     return `<div class="concept ${st}"><div><div class="c-name">${esc(name)}</div>${sub}</div>
       <span class="pill ${st}">${STATUS_TEXT[st]}</span></div>`;
   }).join("");
+}
+
+async function loadExplanation(d) {
+  const box = $("explain");
+  if (!d.roots.length || !attempt) { box.hidden = true; return; }
+  box.hidden = false;
+  box.innerHTML = `<span class="ai">AI sənin üçün izah yazır...</span>
+    <div class="skeleton" style="width:80%"></div><div class="skeleton"></div><div class="skeleton" style="width:60%"></div>`;
+  try {
+    const res = await api("POST", `/attempts/${attempt.attempt_id}/explanation`, { token: attempt.token });
+    const e = res.explanation;
+    if (!e) { box.hidden = true; return; }
+    box.innerHTML = `<span class="ai">Sənə özəl izah</span>
+      <h3>${esc(e.headline)}</h3>
+      <p>${mathHtml(e.why)}</p>
+      <div class="box"><b>Qayda</b>${mathHtml(e.rule)}</div>
+      <div class="box"><b>Nümunə</b>${mathHtml(e.example)}</div>
+      <div class="tip">💡 ${mathHtml(e.tip)}</div>
+      ${e.source_page ? `<span class="src">Mənbə: Riyaziyyat 5, səh. ${e.source_page}</span>` : ""}`;
+  } catch (err) {
+    box.innerHTML = `<span class="ai">İzah</span><p class="muted">${esc(err.message)}</p>
+      <button class="retry" type="button">Yenidən cəhd et</button>`;
+    box.querySelector(".retry").onclick = () => loadExplanation(d);
+  }
 }
 
 $("plan-btn").onclick = () => { renderPlan(lastDiagnosis); show("screen-plan"); };

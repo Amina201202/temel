@@ -11,3 +11,4 @@ langgraph
 langgraph-checkpoint-postgres
 psycopg[binary,pool]
 qrcode
+pgvector
