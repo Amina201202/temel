@@ -55,7 +55,7 @@ def error_text(resp):
 
 
 def graph_dot(graph):
-    # graphviz ile sade qraf, ox: evvel bilinmeli -> sonraki movzu
+    # bu bolmenin movzulari goy, evvelki sinifler boz ve qirik xetle
     lines = [
         "digraph G {",
         "rankdir=TB;",
@@ -68,7 +68,12 @@ def graph_dot(graph):
     for e in graph["edges"]:
         a = e["from_concept"].replace('"', "'")
         b = e["to_concept"].replace('"', "'")
-        lines.append(f'"{a}" -> "{b}";')
+        if e.get("cross"):
+            node = f"{a} ({e['from_grade']}-ci sinif)"
+            lines.append(f'"{node}" [fillcolor="#F4F5FA", color="#9EA2B5", style="rounded,filled,dashed"];')
+            lines.append(f'"{node}" -> "{b}" [style=dashed];')
+        else:
+            lines.append(f'"{a}" -> "{b}";')
     lines.append("}")
     return "\n".join(lines)
 
@@ -84,9 +89,11 @@ st.header("Bölmə yüklə")
 st.caption("Dərslik bölməsini yüklə. AI mövzuları və aralarındakı asılılıqları çıxaracaq.")
 
 with st.form("upload", clear_on_submit=False):
-    col1, col2 = st.columns([3, 1])
+    col1, col2, col3 = st.columns([3, 1, 1])
     title = col1.text_input("Bölmənin adı", placeholder="məs. Bölənlər və adi kəsrlər")
     grade = col2.selectbox("Sinif", [5, 6, 7, 8, 9], index=0)
+    first_page = col3.number_input("Kitabda ilk səhifə", min_value=1, max_value=500, value=1,
+                                   help="PDF-in ilk səhifəsi kitabda neçənci səhifədir (mənbə üçün)")
     file = st.file_uploader(
         "Fayl (.txt, PDF və ya şəkil)",
         type=["txt", "pdf", "jpg", "jpeg", "png", "webp", "heic"],
@@ -97,14 +104,14 @@ if submitted:
     if not title or not file:
         st.warning("Bölmənin adını yaz və fayl seç.")
     else:
-        with st.status("Gemini dərsliyi oxuyur...", expanded=True) as status:
+        with st.status("Gemini dərsliyi oxuyur... (PDF-də 2-4 dəqiqə çəkə bilər)", expanded=True) as status:
             st.write("Fayl göndərilir")
             try:
                 resp = requests.post(
                     f"{API_URL}/chapters",
-                    data={"title": title, "grade": grade},
+                    data={"title": title, "grade": grade, "first_page": int(first_page)},
                     files={"file": (file.name, file.getvalue())},
-                    timeout=180,
+                    timeout=600,  # PDF oxumaq 2-4 deqiqe ceke biler
                 )
             except requests.Timeout:
                 status.update(label="Vaxt bitdi", state="error")
@@ -176,6 +183,24 @@ with tab_map:
             hide_index=True,
             use_container_width=True,
         )
+
+    st.subheader("Əvvəlki siniflərlə əlaqə")
+    st.caption("AI bu bölmənin mövzularını əvvəlki siniflərin mövzuları ilə əlaqələndirir. Səhv əlaqəni sil.")
+    if st.button("Əvvəlki siniflərlə əlaqələndir", type="primary"):
+        with st.spinner("AI əlaqələri axtarır..."):
+            res = api_send("POST", f"/chapters/{selected}/link", timeout=180)
+        if res is not None:
+            st.success(f"{len(res['created'])} yeni əlaqə yaradıldı")
+            st.rerun()
+    cross = [e for e in graph["edges"] if e.get("cross")]
+    if not cross:
+        st.info("Hələ siniflərarası əlaqə yoxdur.")
+    for e in cross:
+        c1, c2 = st.columns([5, 1])
+        c1.markdown(f"**{e['from_concept']}** ({e['from_grade']}-ci sinif) → **{e['to_concept']}**")
+        if c2.button("Sil", key=f"del{e['id']}"):
+            api_send("DELETE", f"/edges/{e['id']}")
+            st.rerun()
 
 with tab_bank:
     stats = api_get(f"/chapters/{selected}/questions/stats")

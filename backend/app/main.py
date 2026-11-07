@@ -22,9 +22,10 @@ from .db import Base, engine, get_db
 from .diagnosis import MAX_QUESTIONS, build_graph
 from .explain import generate_explanation
 from .rag import ensure_index, search
+from .link import collect_graph, suggest_links
 from .guard import EMAIL, PHONE, GuardBlock, answer_question, check_input
 from .auth import store
-from .extract import ExtractionError, extract_graph
+from .extract import ExtractionError, extract_graph, transcribe_pdf
 from .models import Attempt, AttemptAnswer, Chapter, ClassSession, Concept, ConceptEdge, QuestionTemplate
 from .questions import build_checked_templates, build_instance
 from .teacher import router as teacher_router
@@ -112,7 +113,10 @@ def load_graph(db: Session, chapter_id: int) -> GraphOut:
         chapter=chapter_out(ch),
         concepts=[ConceptOut(id=c.id, name=c.name, description=c.description) for c in ch.concepts],
         edges=[
-            EdgeOut(id=e.id, from_concept=e.from_concept.name, to_concept=e.to_concept.name, approved=e.approved)
+            EdgeOut(id=e.id, from_concept=e.from_concept.name, to_concept=e.to_concept.name, approved=e.approved,
+                    cross=e.from_concept.chapter_id != ch.id,
+                    from_grade=db.get(Chapter, e.from_concept.chapter_id).grade
+                    if e.from_concept.chapter_id != ch.id else None)
             for e in ch.edges
         ],
     )
@@ -127,6 +131,7 @@ def health():
 def create_chapter(
     title: str = Form(..., min_length=2, max_length=200),
     grade: int = Form(..., ge=1, le=11),
+    first_page: int = Form(1, ge=1, le=500),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
@@ -136,8 +141,13 @@ def create_chapter(
     if len(data) > MAX_SIZE:
         raise HTTPException(413, "Fayl 15 MB-dan böyükdür")
 
+    filename = file.filename or "file.txt"
     try:
-        graph = extract_graph(file.filename or "file.txt", data)
+        if filename.lower().endswith(".pdf"):
+            # PDF -> metn (OCR), sonra metnden movzular: RAG ve suallar ucun metn lazimdir
+            text = transcribe_pdf(data, first_page)
+            filename, data = filename[:-4] + ".txt", text.encode("utf-8")
+        graph = extract_graph(filename, data)
     except ExtractionError as e:
         raise HTTPException(502, f"AI mövzuları çıxara bilmədi: {e}") from e
 
@@ -145,7 +155,7 @@ def create_chapter(
         raise HTTPException(422, "Bu fayldan heç bir mövzu tapılmadı")
 
     source_text = ""
-    if (file.filename or "").lower().endswith(".txt"):
+    if filename.lower().endswith(".txt"):
         source_text = data.decode("utf-8", errors="ignore")
     chapter = Chapter(title=title, grade=grade, source_file=file.filename or "", source_text=source_text)
     db.add(chapter)
@@ -329,25 +339,34 @@ def thread_config(attempt_id):
 
 
 def initial_state(db: Session, chapter_id: int):
-    graph = load_graph(db, chapter_id)
-    prereqs = {c.name: [] for c in graph.concepts}
-    for e in graph.edges:
-        prereqs[e.to_concept].append(e.from_concept)
+    chapter = db.get(Chapter, chapter_id)
+    if chapter is None:
+        raise HTTPException(404, "Bölmə tapılmadı")
+    # bu bolme + elaqeli evvelki sinif movzulari bir qrafda
+    concepts, edges, display, grades = collect_graph(db, chapter)
+    prereqs = {display[cid]: [] for cid in concepts}
+    for e in edges.values():
+        if e.to_concept_id in display and e.from_concept_id in display:
+            prereqs[display[e.to_concept_id]].append(display[e.from_concept_id])
 
     templates = {}
     rows = db.scalars(select(QuestionTemplate)
-                      .where(QuestionTemplate.chapter_id == chapter_id, QuestionTemplate.status == "approved")
-                      .options(selectinload(QuestionTemplate.concept))).all()
+                      .where(QuestionTemplate.concept_id.in_(list(concepts)), QuestionTemplate.status == "approved")).all()
     for q in rows:
-        templates.setdefault(q.concept.name, []).append(
+        templates.setdefault(display[q.concept_id], []).append(
             {"id": q.id, "difficulty": q.difficulty, "data": q.as_dict()})
-    if not templates:
+    if not any(concepts[cid].chapter_id == chapter.id for cid in concepts if display[cid] in templates):
         raise HTTPException(409, "Bu bölmədə hələ təsdiqlənmiş sual yoxdur")
 
+    # izah ve RAG ucun: her movzu hansi bolmeden/sinifden gelir
+    meta = {display[cid]: {"concept_id": cid, "chapter_id": c.chapter_id, "name": c.name,
+                           "grade": grades[c.chapter_id]} for cid, c in concepts.items()}
+    order = sorted(concepts, key=lambda cid: (concepts[cid].chapter_id != chapter.id, -grades[concepts[cid].chapter_id], cid))
     return {
-        "concepts": [c.name for c in graph.concepts],
+        "concepts": [display[cid] for cid in order],
         "prereqs": prereqs,
         "templates": templates,
+        "meta": meta,
         "seed": random.randint(0, 10**9),
     }
 
@@ -438,6 +457,26 @@ def answer_attempt(attempt_id: int, body: AnswerIn, db: Session = Depends(get_db
     return finish_or_ask(attempt, db, feedback)
 
 
+@app.post("/chapters/{chapter_id}/link")
+def link_chapter(chapter_id: int, db: Session = Depends(get_db)):
+    ch = db.get(Chapter, chapter_id)
+    if ch is None:
+        raise HTTPException(404, "Bölmə tapılmadı")
+    created = suggest_links(db, ch)
+    return {"created": [{"id": e.id, "from": e.from_concept_id, "to": e.to_concept_id, "reason": r} for e, r in created]}
+
+
+@app.delete("/edges/{edge_id}")
+def delete_edge(edge_id: int, db: Session = Depends(get_db)):
+    # admin AI-in sehv elaqesini silir (HITL)
+    e = db.get(ConceptEdge, edge_id)
+    if e is None:
+        raise HTTPException(404, "Əlaqə tapılmadı")
+    db.delete(e)
+    db.commit()
+    return {"ok": True}
+
+
 @app.post("/chapters/{chapter_id}/index")
 def index_chapter(chapter_id: int, db: Session = Depends(get_db)):
     ch = db.get(Chapter, chapter_id)
@@ -462,11 +501,13 @@ def attempt_explanation(attempt_id: int, body: TokenIn, db: Session = Depends(ge
         return {"explanation": d["explanation"]}  # bir defe yaradiriq, sonra cache
 
     root = d["roots"][0]
-    chapter = db.get(Chapter, attempt.chapter_id)
-    concept = db.scalar(select(Concept).where(Concept.chapter_id == chapter.id, Concept.name == root))
+    info = (d.get("meta") or {}).get(root)
+    chapter = db.get(Chapter, info["chapter_id"] if info else attempt.chapter_id)
+    concept = db.get(Concept, info["concept_id"]) if info else db.scalar(
+        select(Concept).where(Concept.chapter_id == chapter.id, Concept.name == root))
     try:
         ensure_index(db, chapter)
-        pages = search(db, chapter.id, f"{root}. {concept.description if concept else ''}", k=2)
+        pages = search(db, chapter.id, f"{concept.name if concept else root}. {concept.description if concept else ''}", k=2)
     except Exception:  # noqa: BLE001
         db.rollback()
         logger.exception("RAG axtarisi alinmadi")
@@ -517,15 +558,18 @@ def ask_question(attempt_id: int, body: AskIn, db: Session = Depends(get_db)):
         raise HTTPException(429, "Çox cəhd oldu. Sabah yenidən yoxla.")
 
     concept = d["roots"][0]
+    info = (d.get("meta") or {}).get(concept)
+    src_chapter_id = info["chapter_id"] if info else attempt.chapter_id
     try:
         question = check_input(body.question, concept)
         store().setex(key, 24 * 3600, used + 1)
         # movzunun oz sehifesi + suala en uygun sehifeler (tekrarsiz)
-        pages = search(db, attempt.chapter_id, concept, k=1)
-        for extra in search(db, attempt.chapter_id, f"{concept}. {question}", k=3):
+        plain = info["name"] if info else concept
+        pages = search(db, src_chapter_id, plain, k=1)
+        for extra in search(db, src_chapter_id, f"{plain}. {question}", k=3):
             if extra["page"] not in {x["page"] for x in pages} and len(pages) < 3:
                 pages.append(extra)
-        ans = answer_question(question, concept, pages, db.get(Chapter, attempt.chapter_id).grade)
+        ans = answer_question(question, concept, pages, db.get(Chapter, src_chapter_id).grade)
     except GuardBlock as g:
         store().incr(f"guard:{g.rail}")  # neçə defe hansi qoruma isledi - statistikaya
         logger.info("guard block rail=%s attempt=%s", g.rail, attempt.id)

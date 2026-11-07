@@ -138,9 +138,14 @@ def close_session(session_id: int, teacher: Teacher = Depends(current_teacher), 
 @router.get("/teacher/sessions/{session_id}/radar")
 def radar(session_id: int, teacher: Teacher = Depends(current_teacher), db: Session = Depends(get_db)):
     cs = own_session(db, session_id, teacher)
-    concepts = db.scalars(select(Concept.name).where(Concept.chapter_id == cs.chapter_id).order_by(Concept.id)).all()
     attempts = db.scalars(select(Attempt).where(Attempt.session_id == cs.id).order_by(Attempt.started_at)).all()
     done = [a for a in attempts if a.status == "done" and a.diagnosis]
+    # bolmenin movzulari + diaqnozda gorunen evvelki sinif movzulari
+    concepts = list(db.scalars(select(Concept.name).where(Concept.chapter_id == cs.chapter_id).order_by(Concept.id)).all())
+    for a in done:
+        for name in a.diagnosis["concept_map"]:
+            if name not in concepts:
+                concepts.append(name)
 
     answered = dict(db.execute(
         select(AttemptAnswer.attempt_id, func.count()).join(Attempt, Attempt.id == AttemptAnswer.attempt_id)

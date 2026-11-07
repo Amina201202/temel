@@ -7,3 +7,8 @@ data/ai_graph.json
 data/riyaziyyat-5-az-1/
 .DS_Store
 experiments/__pycache__/
+data/books/
+data/books_text/
+data/*.zip
+data/*.pdf
+data/chapters/

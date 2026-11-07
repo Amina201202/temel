@@ -14,6 +14,9 @@ class EdgeOut(BaseModel):
     from_concept: str
     to_concept: str
     approved: bool
+    # basqa sinfin movzusundan gelen elaqe
+    cross: bool = False
+    from_grade: int | None = None
 
 
 class ChapterOut(BaseModel):

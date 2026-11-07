@@ -23,6 +23,7 @@ class DiagState(TypedDict, total=False):
     concepts: list[str]
     prereqs: dict[str, list[str]]
     templates: dict[str, list[dict]]
+    meta: dict
     seed: int
     status: dict[str, str]  # known | implied | weak | weak_implied | untested
     stack: list[str]
@@ -250,6 +251,8 @@ def diagnose(state: DiagState):
         "correct": len(asked) - len(wrong),
         "misconceptions": [a["misconception"] for a in wrong if a["misconception"]],
         "confidence": confidence,
+        # kok basqa sinifdendirse, izah ucun hansi kitabdan oldugunu bilmek lazimdir
+        "meta": {c: state.get("meta", {}).get(c) for c in roots + [w for w in weak]},
     }
     return {"diagnosis": diagnosis, "done": True}
 
