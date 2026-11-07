@@ -7,8 +7,12 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
+from pathlib import Path
+
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
-from sqlalchemy import delete, select
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session, selectinload
 
 from langgraph.types import Command
@@ -409,3 +413,25 @@ def answer_attempt(attempt_id: int, body: AnswerIn, db: Session = Depends(get_db
 def get_attempt_state(attempt_id: int, token: str, db: Session = Depends(get_db)):
     # sehife yenilenende sagird qaldigi yerden davam edir
     return finish_or_ask(get_attempt(db, attempt_id, token), db)
+
+
+@app.get("/public/chapters")
+def public_chapters(db: Session = Depends(get_db)):
+    # sagird yalniz tesdiqlenmis suali olan bolmeleri gorur
+    rows = db.execute(
+        select(Chapter.id, Chapter.title, Chapter.grade, func.count(QuestionTemplate.id))
+        .join(QuestionTemplate, QuestionTemplate.chapter_id == Chapter.id)
+        .where(QuestionTemplate.status == "approved")
+        .group_by(Chapter.id)
+        .order_by(Chapter.grade, Chapter.title)
+    ).all()
+    return [{"id": r[0], "title": r[1], "grade": r[2], "questions": r[3]} for r in rows]
+
+
+# sagird tetbiqi: html/css/js, eyni serverden (CORS lazim olmur)
+app.mount("/app", StaticFiles(directory=Path(__file__).parent / "static", html=True), name="student")
+
+
+@app.get("/", include_in_schema=False)
+def root():
+    return RedirectResponse("/app/")

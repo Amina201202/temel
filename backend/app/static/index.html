@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="az">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Təməl — Sənin bilik radarın</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="phone">
+
+  <!-- 1. Giris -->
+  <section id="screen-start" class="screen">
+    <header class="brand">
+      <svg class="logo" viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="11" fill="#3D4BE0"/><circle cx="20" cy="20" r="12" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width="2"/><circle cx="20" cy="20" r="6.5" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="2"/><path d="M20 20L28.5 11.5" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><circle cx="20" cy="20" r="2.4" fill="#fff"/><circle cx="25" cy="26" r="2" fill="#fff"/></svg>
+      <div>
+        <div class="brand-name">Təməl</div>
+        <div class="brand-tag">Sənin bilik radarın</div>
+      </div>
+    </header>
+
+    <div class="hero">
+      <h1>Nəyi bilmədiyini 10 dəqiqədə tap.</h1>
+      <p class="muted">Səhv etsən, sistem səbəbi əvvəlki mövzularda axtarır.</p>
+    </div>
+
+    <form id="start-form" class="card stack" novalidate>
+      <label class="field">
+        <span>Ləqəb</span>
+        <input id="nickname" type="text" maxlength="20" autocomplete="off" placeholder="məs. ulduz_5" required>
+      </label>
+
+      <label class="field">
+        <span>Sinif kodu <em class="muted">(müəllim versə)</em></span>
+        <input id="join-code" type="text" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="məs. 4821">
+      </label>
+
+      <fieldset class="field" id="chapter-field">
+        <legend>və ya mövzu seç</legend>
+        <div id="chapter-list" class="choice-list"><p class="muted">Yüklənir...</p></div>
+      </fieldset>
+
+      <p id="start-error" class="error" hidden></p>
+      <button id="start-btn" class="btn primary" type="submit">Testə başla →</button>
+    </form>
+
+    <p class="privacy">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      Real adını yazma. Nəticələr yalnız ləqəblə saxlanır.
+    </p>
+  </section>
+
+  <!-- 2. Test -->
+  <section id="screen-test" class="screen" hidden>
+    <div class="topbar">
+      <button class="link" id="quit-btn" type="button">← Çıx</button>
+      <span id="q-counter" class="counter"></span>
+    </div>
+    <div class="progress"><div id="q-progress"></div></div>
+    <div class="tags"><span id="q-concept" class="tag accent"></span></div>
+
+    <div class="card question">
+      <div id="q-text" class="q-text"></div>
+    </div>
+
+    <div id="q-options" class="options"></div>
+
+    <div id="q-feedback" class="feedback" hidden></div>
+    <div class="spacer"></div>
+    <button id="next-btn" class="btn primary" type="button" hidden>Davam et →</button>
+    <div id="wait-btn" class="btn disabled">Cavab seç</div>
+  </section>
+
+  <!-- 3. Bilik xeritesi -->
+  <section id="screen-map" class="screen" hidden>
+    <div class="hero small">
+      <h1>Sənin bilik xəritən</h1>
+      <p id="map-summary" class="muted"></p>
+    </div>
+    <div id="map-roots"></div>
+    <h2 class="section-title">Mövzular</h2>
+    <div id="map-list" class="concept-list"></div>
+    <div class="legend">
+      <span><i class="dot root"></i>Kök səbəb</span>
+      <span><i class="dot weak"></i>Zəif</span>
+      <span><i class="dot known"></i>Bilirsən</span>
+      <span><i class="dot unknown"></i>Yoxlanmadı</span>
+    </div>
+    <div class="spacer"></div>
+    <button id="plan-btn" class="btn primary" type="button">3 günlük planıma bax →</button>
+  </section>
+
+  <!-- 4. Plan -->
+  <section id="screen-plan" class="screen" hidden>
+    <div class="topbar">
+      <button class="link" id="back-map-btn" type="button">← Xəritə</button>
+      <span id="plan-done" class="counter"></span>
+    </div>
+    <div class="hero small">
+      <h1>3 günlük plan</h1>
+      <p id="plan-goal" class="muted"></p>
+    </div>
+    <div id="plan-days" class="stack"></div>
+    <div class="spacer"></div>
+    <button id="restart-btn" class="btn secondary" type="button">Yeni test başla</button>
+  </section>
+
+</main>
+<script src="app.js"></script>
+</body>
+</html>
