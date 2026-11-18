@@ -12,7 +12,21 @@ EVAL_ERRORS = (UnsafeExpression, ZeroDivisionError, TypeError, ValueError)
 
 SAMPLE_RUNS = 30
 MAX_TRIES = 500
-PLACEHOLDER = re.compile(r"\{([a-z][a-z0-9_]*)\}")
+PLACEHOLDER = re.compile(r"\{([A-Za-z][A-Za-z0-9_]*)\}")
+# constraints icinde "b = -(r1 + r2)" - hesablanan deyisen (tek "=")
+ASSIGN = re.compile(r"^\s*([A-Za-z][A-Za-z0-9_]*)\s*=(?!=)\s*(.+)$")
+
+
+def split_constraints(constraints):
+    """Teyinleri (b = ...) ve sertleri (a != b) ayirir. Teyinler sira ile hesablanir."""
+    assigns, conds = [], []
+    for c in constraints:
+        m = ASSIGN.match(c)
+        if m:
+            assigns.append((m.group(1), m.group(2).strip()))
+        else:
+            conds.append(c)
+    return assigns, conds
 
 
 class LLMVariable(BaseModel):
@@ -71,7 +85,12 @@ Qaydalar:
     mötərizəni açma: expand((x + p)*(x + q)). Funksiya qiyməti: a*t**2 + b*t + c (t dəyişəndir).
   * Mətndə mənfi parametr "+ −3" kimi görünməsin: ya şərtlə müsbət saxla, ya işarəni mətnə yaz ("x² − {{p}}x + {{q}} = 0").
   Bölmə dəqiqdir: a/b kəsr qaytarır.
-- Hər ifadə TƏK ifadədir: "=", ";", dəyişən təyini, çox sətir OLMAZ. Maksimum 200 simvol.
+- Hər ifadə TƏK ifadədir: ";" və çox sətir OLMAZ. Maksimum 200 simvol.
+- constraints içində HESABLANAN dəyişən yaza bilərsən (tək "=" ilə): "b = -(r1 + r2)", "c = r1*r2".
+  Kvadrat tənlik üçün ən yaxşı üsul: əvvəlcə tam kökləri (r1, r2) variables-da seç, əmsalları onlardan hesabla.
+  Təyinlər sırayla hesablanır, şərtlərdən əvvəl yaz. Hesablanan dəyişəni mətndə {{b}} kimi işlətmək olar.
+  answer_expr və distractors-da "=" OLMAZ.
+- Yalnız Python sintaksisi: "and", "or", ">=", "<=", "!=". "? :", "&&", "||" OLMAZ. Mətn (string) hesablamaq OLMAZ.
 - Qarışıq ədədlə HESABLAMAQ üçün Mix(w, p, q) istifadə et, o qarışıq ədədin qiymətini qaytarır: Mix(2, 1, 3) = 7/3.
   Nəticəni qarışıq ədəd kimi göstərmək üçün answer_format="mixed" yaz, çevirmə avtomatik olur.
   Nümunə: "{{a}} {{b}}/{{c}} + {{d}} {{e}}/{{f}}" sualında answer_expr = "Mix(a, b, c) + Mix(d, e, f)".
@@ -126,13 +145,17 @@ def generate_templates(concept, description, prereqs, source_text, grade=5):
 def sample_variables(variables, constraints, rng):
     # serte uygun deyerler tapilana qeder random secirik
     # sertde xeta varsa UnsafeExpression atir, tapilmasa None qaytarir
+    assigns, conds = split_constraints(constraints)
     for _ in range(MAX_TRIES):
         env = {}
         for v in variables:
             lo, hi = sorted((int(v["min"]), int(v["max"])))
             env[v["name"]] = Integer(rng.randint(lo, hi))
         try:
-            if all(evaluate(c, env) for c in constraints):
+            # evvel kokleri secib emsallari onlardan hesablamaq olur
+            for name, expr in assigns:
+                env[name] = evaluate(expr, env)
+            if all(evaluate(c, env) for c in conds):
                 return env
         except ZeroDivisionError:
             continue
@@ -194,7 +217,7 @@ def build_instance(tpl, seed=None, tries=30, reasons=None):
             why.append("2-dən az fərqli səhv variant alındı")
             continue
         inst = {"text": render_text(tpl["text"], env), "options": options,
-                "variables": {k: int(v) for k, v in env.items()}, "collided": collided}
+                "variables": {k: (int(v) if getattr(v, "is_integer", False) else str(v)) for k, v in env.items()}, "collided": collided}
         if not collided:
             best = inst
             break
@@ -216,12 +239,23 @@ def check_template(tpl, allowed_points):
             problems.append(f"{v['name']}: min > max")
 
     used = set(PLACEHOLDER.findall(tpl["text"]))
-    if used - names:
-        problems.append(f"mətndə naməlum dəyişən: {', '.join(sorted(used - names))}")
+    assigned = {n for n, _ in split_constraints(tpl["constraints"])[0]}
+    if used - names - assigned:
+        problems.append(f"mətndə naməlum dəyişən: {', '.join(sorted(used - names - assigned))}")
     if not names:
         problems.append("heç bir dəyişən yoxdur")
 
-    for expr in [tpl["answer_expr"], *tpl["constraints"], *(d["expr"] for d in tpl["distractors"])]:
+    assigns, conds = split_constraints(tpl["constraints"])
+    for name, expr in assigns:
+        if name == "x" or name in names:
+            problems.append(f"hesablanan dəyişənin adı uyğun deyil: {name}")
+        try:
+            check_syntax(expr, names)
+        except (UnsafeExpression, SyntaxError) as e:
+            problems.append(f"ifadə səhvdir: {name} = {expr[:70]} ({e})")
+        names = names | {name}
+
+    for expr in [tpl["answer_expr"], *conds, *(d["expr"] for d in tpl["distractors"])]:
         try:
             check_syntax(expr, names)
         except (UnsafeExpression, SyntaxError) as e:
@@ -309,14 +343,27 @@ def repair_template(concept, tpl_data, problems, allowed):
     return resp.parsed
 
 
+# AI bezen JS/riyazi isareler yazir: && || ≥ ≤ ≠ - python formasina ceviririk
+FIXES = [("&&", " and "), ("||", " or "), ("≥", ">="), ("≤", "<="), ("≠", "!="), ("−", "-"), ("×", "*")]
+
+
+def fix_expr(expr):
+    for a, b in FIXES:
+        expr = expr.replace(a, b)
+    return expr
+
+
 def template_to_data(t):
+    distractors = [d.model_dump() for d in t.distractors]
+    for d in distractors:
+        d["expr"] = fix_expr(d["expr"])
     return {
         "text": t.text,
         "variables": [v.model_dump() for v in t.variables],
-        "constraints": list(t.constraints),
-        "answer_expr": t.answer_expr,
+        "constraints": [fix_expr(c) for c in t.constraints],
+        "answer_expr": fix_expr(t.answer_expr),
         "answer_format": t.answer_format,
-        "distractors": [d.model_dump() for d in t.distractors],
+        "distractors": distractors,
     }
 
 

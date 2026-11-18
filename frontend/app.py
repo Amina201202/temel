@@ -91,7 +91,8 @@ st.caption("Dərslik bölməsini yüklə. AI mövzuları və aralarındakı ası
 with st.form("upload", clear_on_submit=False):
     col1, col2, col3 = st.columns([3, 1, 1])
     title = col1.text_input("Bölmənin adı", placeholder="məs. Bölənlər və adi kəsrlər")
-    grade = col2.selectbox("Sinif", [5, 6, 7, 8, 9], index=0)
+    # default yoxdur ki unudub 5-ci sinif qalmasin
+    grade = col2.selectbox("Sinif", [5, 6, 7, 8, 9], index=None, placeholder="Seç")
     first_page = col3.number_input("Kitabda ilk səhifə", min_value=1, max_value=500, value=1,
                                    help="PDF-in ilk səhifəsi kitabda neçənci səhifədir (mənbə üçün)")
     file = st.file_uploader(
@@ -101,8 +102,8 @@ with st.form("upload", clear_on_submit=False):
     submitted = st.form_submit_button("Yüklə və analiz et", type="primary")
 
 if submitted:
-    if not title or not file:
-        st.warning("Bölmənin adını yaz və fayl seç.")
+    if not title or not file or grade is None:
+        st.warning("Bölmənin adını yaz, sinfi seç və fayl seç.")
     else:
         with st.status("Gemini dərsliyi oxuyur... (PDF-də 2-4 dəqiqə çəkə bilər)", expanded=True) as status:
             st.write("Fayl göndərilir")

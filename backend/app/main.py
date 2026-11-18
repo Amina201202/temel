@@ -72,6 +72,24 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Təməl API", lifespan=lifespan)
+
+
+# Gemini xetasi olanda 500 yox, aydin mesaj qaytaririq
+from fastapi import Request
+from fastapi.responses import JSONResponse
+from google.genai import errors as genai_errors
+
+
+@app.exception_handler(genai_errors.APIError)
+def gemini_error(request: Request, exc: genai_errors.APIError):
+    logging.warning("Gemini xetasi: %s %s", exc.code, exc.message)
+    if exc.code == 402:
+        msg = "Gemini krediti bitib. AI Studio-da balansı artır və yenidən yoxla."
+    elif exc.code == 429:
+        msg = "Gemini limitinə çatdıq. 1 dəqiqə gözlə və yenidən yoxla."
+    else:
+        msg = f"AI xidməti cavab vermədi ({exc.code}). Bir az sonra yenidən yoxla."
+    return JSONResponse(status_code=503, content={"detail": msg})
 app.include_router(teacher_router)
 
 
