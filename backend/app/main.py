@@ -541,6 +541,7 @@ def attempt_explanation(attempt_id: int, body: TokenIn, db: Session = Depends(ge
         logger.exception("izah alinmadi")
         raise HTTPException(502, "AI izahı hazırlaya bilmədi, bir az sonra yenidən cəhd et") from e
 
+    exp["source_grade"] = chapter.grade  # kok basqa sinifdendirse, o kitabin sinfi
     exp["source_text"] = next((p["text"][:400] for p in pages if p["page"] == exp["source_page"]), None)
     attempt.diagnosis = {**d, "explanation": exp}  # JSON sutunu yeniden menimsedirik ki, saxlansin
     db.commit()

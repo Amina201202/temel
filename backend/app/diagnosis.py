@@ -247,6 +247,8 @@ def diagnose(state: DiagState):
         "weak_because": because,
         "unchecked_below": {k: v for k, v in unchecked_below.items() if v},
         "concept_map": concept_map,
+        # sualla yoxlanmayib, cetin suala duz cavabdan netice cixarilib
+        "implied": [c for c in state["concepts"] if status.get(c) == "implied" and c not in roots],
         "answered": len(asked),
         "correct": len(asked) - len(wrong),
         "misconceptions": [a["misconception"] for a in wrong if a["misconception"]],

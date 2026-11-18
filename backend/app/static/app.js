@@ -208,7 +208,8 @@ $("quit-btn").onclick = () => {
 
 // ---------- 3. bilik xeritesi ----------
 
-const STATUS_TEXT = { root: "× Kök səbəb", weak: "! Zəif", known: "✓ Bilirsən", unknown: "Yoxlanmadı" };
+const STATUS_TEXT = { root: "× Kök səbəb", weak: "! Zəif", known: "✓ Bilirsən", implied: "≈ Yəqin bilirsən", unknown: "Yoxlanmadı" };
+const FOREIGN = /\(\d+-c[iıu] sinif\)$/;
 
 function renderMap(d) {
   $("map-summary").textContent = `${d.answered} sualdan ${d.correct}-i düz`;
@@ -230,18 +231,33 @@ function renderMap(d) {
   }
 
   // movzulari sirala: kok, zeif, bilir, yoxlanmadi
-  const order = { root: 0, weak: 1, known: 2, unknown: 3 };
-  const items = Object.entries(d.concept_map).sort((a, b) => order[a[1]] - order[b[1]]);
+  const order = { root: 0, weak: 1, known: 2, implied: 3, unknown: 4 };
+  const implied = new Set(d.implied || []);
+  let hidden = 0;
+  const items = Object.entries(d.concept_map)
+    .map(([name, st]) => [name, st === "known" && implied.has(name) ? "implied" : st])
+    // evvelki siniflerin yoxlanmamis movzularini gizledirik, siyahi uzanmasin
+    .filter(([name, st]) => {
+      if (FOREIGN.test(name) && (st === "implied" || st === "unknown")) { hidden += 1; return false; }
+      return true;
+    })
+    .sort((a, b) => order[a[1]] - order[b[1]]);
+  const more = hidden
+    ? `<p class="muted map-more">+ əvvəlki siniflərdən ${hidden} mövzu: düz cavablarına görə yəqin ki onları bilirsən.</p>` : "";
   $("map-list").innerHTML = items.map(([name, st]) => {
     const because = d.weak_because[name];
     const sub = st === "weak" && because ? `<div class="c-sub">çünki: ${because.map(esc).join(", ")}</div>` : "";
     return `<div class="concept ${st}"><div><div class="c-name">${esc(name)}</div>${sub}</div>
       <span class="pill ${st}">${STATUS_TEXT[st]}</span></div>`;
-  }).join("");
+  }).join("") + more;
 }
 
 async function loadExplanation(d) {
   const box = $("explain");
+  // evvelki testden qalan sual formasini ve cavablari temizleyirik
+  $("ask-form").hidden = true;
+  $("ask-answers").innerHTML = "";
+  $("ask-topic").textContent = "";
   if (!d.roots.length || !attempt) { box.hidden = true; return; }
   box.hidden = false;
   box.innerHTML = `<span class="ai">AI sənin üçün izah yazır...</span>
@@ -256,7 +272,7 @@ async function loadExplanation(d) {
       <div class="box"><b>Qayda</b>${mathHtml(e.rule)}</div>
       <div class="box"><b>Nümunə</b>${mathHtml(e.example)}</div>
       <div class="tip">💡 ${mathHtml(e.tip)}</div>
-      ${e.source_page ? `<span class="src">Mənbə: Riyaziyyat 5, səh. ${e.source_page}</span>` : ""}`;
+      ${e.source_page ? `<span class="src">Mənbə: Riyaziyyat ${e.source_grade || 5}, səh. ${e.source_page}</span>` : ""}`;
     $("ask-topic").textContent = `(yalnız «${d.roots[0]}» haqqında)`;
     $("ask-form").hidden = false;
   } catch (err) {

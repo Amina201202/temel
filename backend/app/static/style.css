@@ -165,3 +165,7 @@ input[type=text]:focus { outline: 2px solid var(--accent); outline-offset: 1px; 
 .qa.a { background: var(--accent-soft); color: #1E268F; }
 .qa.blocked { background: var(--warn-soft); color: var(--warn); }
 .qa small { display: block; margin-top: 4px; color: var(--muted); font-weight: 400; }
+/* yoxlanmayib, cetin suala duz cavabdan netice cixarilib */
+.pill.implied { background: var(--good-soft); color: var(--good); opacity: .6; }
+.dot.implied { background: #3FA57A; opacity: .45; }
+.map-more { font-size: 13px; margin: 4px 2px 0; }
