@@ -164,7 +164,15 @@ def sample_variables(variables, constraints, rng):
 
 def render_text(text, env):
     # str.format istifade etmirik: "{a.__class__}" kimi seyler tehlukelidir
-    return PLACEHOLDER.sub(lambda m: str(env[m.group(1)]) if m.group(1) in env else m.group(0), text)
+    out = PLACEHOLDER.sub(lambda m: str(env[m.group(1)]) if m.group(1) in env else m.group(0), text)
+    return tidy_signs(out)
+
+
+def tidy_signs(text):
+    """Menfi reqem dusende "5x² + -3x" yox, "5x² − 3x" olsun."""
+    text = re.sub(r"\+\s*[-−]\s*(?=\d)", "− ", text)
+    text = re.sub(r"(?<=[\w)²³])\s*[-−]\s*[-−]\s*(?=\d)", " + ", text)
+    return text
 
 
 def build_instance(tpl, seed=None, tries=30, reasons=None):

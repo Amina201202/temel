@@ -24,7 +24,7 @@ from .explain import generate_explanation
 from .rag import ensure_index, search
 from .link import collect_graph, suggest_links
 from .guard import EMAIL, PHONE, GuardBlock, answer_question, check_input
-from .auth import store
+from .auth import require_admin, store
 from .extract import ExtractionError, extract_graph, transcribe_pdf
 from .models import Attempt, AttemptAnswer, Chapter, ClassSession, Concept, ConceptEdge, QuestionTemplate
 from .questions import build_checked_templates, build_instance
@@ -145,7 +145,7 @@ def health():
     return {"status": "ok"}
 
 
-@app.post("/chapters", response_model=GraphOut)
+@app.post("/chapters", response_model=GraphOut, dependencies=[Depends(require_admin)])
 def create_chapter(
     title: str = Form(..., min_length=2, max_length=200),
     grade: int = Form(..., ge=1, le=11),
@@ -211,7 +211,7 @@ def create_chapter(
     return load_graph(db, chapter.id)
 
 
-@app.get("/chapters", response_model=list[ChapterOut])
+@app.get("/chapters", response_model=list[ChapterOut], dependencies=[Depends(require_admin)])
 def list_chapters(db: Session = Depends(get_db)):
     chapters = db.scalars(
         select(Chapter)
@@ -221,7 +221,7 @@ def list_chapters(db: Session = Depends(get_db)):
     return [chapter_out(ch) for ch in chapters]
 
 
-@app.get("/chapters/{chapter_id}/graph", response_model=GraphOut)
+@app.get("/chapters/{chapter_id}/graph", response_model=GraphOut, dependencies=[Depends(require_admin)])
 def get_graph(chapter_id: int, db: Session = Depends(get_db)):
     return load_graph(db, chapter_id)
 
@@ -250,7 +250,7 @@ def question_out(q: QuestionTemplate, with_sample=True) -> QuestionOut:
     )
 
 
-@app.post("/chapters/{chapter_id}/questions/generate", response_model=QuestionStats)
+@app.post("/chapters/{chapter_id}/questions/generate", response_model=QuestionStats, dependencies=[Depends(require_admin)])
 def generate_questions(chapter_id: int, db: Session = Depends(get_db)):
     graph = load_graph(db, chapter_id)
     ch = db.get(Chapter, chapter_id)
@@ -299,7 +299,7 @@ def generate_questions(chapter_id: int, db: Session = Depends(get_db)):
     return question_stats(chapter_id, db)
 
 
-@app.get("/chapters/{chapter_id}/questions", response_model=list[QuestionOut])
+@app.get("/chapters/{chapter_id}/questions", response_model=list[QuestionOut], dependencies=[Depends(require_admin)])
 def list_questions(chapter_id: int, status: str | None = None, db: Session = Depends(get_db)):
     query = (select(QuestionTemplate)
              .where(QuestionTemplate.chapter_id == chapter_id)
@@ -310,7 +310,7 @@ def list_questions(chapter_id: int, status: str | None = None, db: Session = Dep
     return [question_out(q) for q in db.scalars(query).all()]
 
 
-@app.get("/chapters/{chapter_id}/questions/stats", response_model=QuestionStats)
+@app.get("/chapters/{chapter_id}/questions/stats", response_model=QuestionStats, dependencies=[Depends(require_admin)])
 def question_stats(chapter_id: int, db: Session = Depends(get_db)):
     statuses = db.scalars(select(QuestionTemplate.status).where(QuestionTemplate.chapter_id == chapter_id)).all()
     return QuestionStats(
@@ -322,7 +322,7 @@ def question_stats(chapter_id: int, db: Session = Depends(get_db)):
     )
 
 
-@app.patch("/questions/{question_id}", response_model=QuestionOut)
+@app.patch("/questions/{question_id}", response_model=QuestionOut, dependencies=[Depends(require_admin)])
 def set_question_status(question_id: int, body: StatusIn, db: Session = Depends(get_db)):
     if body.status not in ("approved", "rejected", "needs_review"):
         raise HTTPException(400, "Status səhvdir")
@@ -338,7 +338,7 @@ def set_question_status(question_id: int, body: StatusIn, db: Session = Depends(
     return question_out(q)
 
 
-@app.post("/chapters/{chapter_id}/questions/approve-auto", response_model=QuestionStats)
+@app.post("/chapters/{chapter_id}/questions/approve-auto", response_model=QuestionStats, dependencies=[Depends(require_admin)])
 def approve_auto(chapter_id: int, db: Session = Depends(get_db)):
     for q in db.scalars(select(QuestionTemplate).where(
             QuestionTemplate.chapter_id == chapter_id, QuestionTemplate.status == "auto_ok")).all():
@@ -475,7 +475,7 @@ def answer_attempt(attempt_id: int, body: AnswerIn, db: Session = Depends(get_db
     return finish_or_ask(attempt, db, feedback)
 
 
-@app.post("/chapters/{chapter_id}/link")
+@app.post("/chapters/{chapter_id}/link", dependencies=[Depends(require_admin)])
 def link_chapter(chapter_id: int, db: Session = Depends(get_db)):
     ch = db.get(Chapter, chapter_id)
     if ch is None:
@@ -484,7 +484,7 @@ def link_chapter(chapter_id: int, db: Session = Depends(get_db)):
     return {"created": [{"id": e.id, "from": e.from_concept_id, "to": e.to_concept_id, "reason": r} for e, r in created]}
 
 
-@app.delete("/edges/{edge_id}")
+@app.delete("/edges/{edge_id}", dependencies=[Depends(require_admin)])
 def delete_edge(edge_id: int, db: Session = Depends(get_db)):
     # admin AI-in sehv elaqesini silir (HITL)
     e = db.get(ConceptEdge, edge_id)
@@ -495,7 +495,7 @@ def delete_edge(edge_id: int, db: Session = Depends(get_db)):
     return {"ok": True}
 
 
-@app.post("/chapters/{chapter_id}/index")
+@app.post("/chapters/{chapter_id}/index", dependencies=[Depends(require_admin)])
 def index_chapter(chapter_id: int, db: Session = Depends(get_db)):
     ch = db.get(Chapter, chapter_id)
     if ch is None:

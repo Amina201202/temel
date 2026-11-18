@@ -153,10 +153,18 @@ def radar(session_id: int, teacher: Teacher = Depends(current_teacher), db: Sess
 
     # her movzu ucun nece sagirdde kok sebeb / zeif / bilir
     concept_stats = []
+    def status_of(a, c):
+        st = a.diagnosis["concept_map"].get(c, "unknown")
+        # yoxlanmayib, cetin suala duz cavabdan netice cixarilib
+        if st == "known" and c in (a.diagnosis.get("implied") or []):
+            return "implied"
+        return st
+
     for c in concepts:
-        counts = Counter(a.diagnosis["concept_map"].get(c, "unknown") for a in done)
+        counts = Counter(status_of(a, c) for a in done)
         concept_stats.append({"concept": c, "root": counts["root"], "weak": counts["weak"],
-                              "known": counts["known"], "unknown": counts["unknown"]})
+                              "known": counts["known"], "implied": counts["implied"],
+                              "unknown": counts["unknown"]})
 
     roots = Counter(r for a in done for r in a.diagnosis["roots"]).most_common()
     no_gap = sum(1 for a in done if not a.diagnosis["roots"])

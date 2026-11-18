@@ -8,13 +8,39 @@ API_URL = os.getenv("API_URL", "http://localhost:8000")
 st.set_page_config(page_title="Təməl · Admin", layout="wide")
 
 ADMIN_KEY = os.getenv("ADMIN_PASSWORD", "")
+PUBLIC_URL = os.getenv("PUBLIC_URL", "http://localhost:8010").rstrip("/")
+
+# panel internetde aciq olacaq - evvelce sifre
+if not st.session_state.get("admin_ok"):
+    st.title("Təməl · Admin")
+    with st.form("login"):
+        pwd = st.text_input("Admin şifrəsi", type="password")
+        if st.form_submit_button("Daxil ol", type="primary"):
+            if ADMIN_KEY and pwd == ADMIN_KEY:
+                st.session_state["admin_ok"] = True
+                st.rerun()
+            else:
+                st.error("Şifrə səhvdir")
+    st.stop()
+
+# istifadeci adinda az herflerini latina ceviririk: sebine, not "səbinə"
+AZ_LATIN = str.maketrans("əıöüçşğ", "eioucsg")
+
+
+def to_username(text):
+    return text.strip().lower().replace("i̇", "i").translate(AZ_LATIN).replace(" ", "_")
+
+
+# butun sorgulara admin acarini elave edirik
+http = requests.Session()
+http.headers["X-Admin-Key"] = ADMIN_KEY
 
 with st.sidebar:
     st.title("Təməl")
     st.caption("Sənin bilik radarın")
     st.divider()
     st.markdown("**Admin paneli**")
-    st.markdown("[Şagird tətbiqi](http://localhost:8010/app/) · [Müəllim paneli](http://localhost:8010/app/teacher.html)")
+    st.markdown(f"[Şagird tətbiqi]({PUBLIC_URL}/app/) · [Müəllim paneli]({PUBLIC_URL}/app/teacher.html)")
     st.divider()
     st.markdown("**Müəllim hesabları**")
     with st.form("new_teacher", clear_on_submit=True):
@@ -22,8 +48,8 @@ with st.sidebar:
         t_user = st.text_input("İstifadəçi adı", placeholder="sebine (kiçik hərf, rəqəm)")
         t_ok = st.form_submit_button("Hesab yarat")
     if t_ok:
-        r = requests.post(f"{API_URL}/admin/teachers", headers={"X-Admin-Key": ADMIN_KEY},
-                          json={"name": t_name, "username": t_user.strip().lower()}, timeout=15)
+        r = http.post(f"{API_URL}/admin/teachers",
+                          json={"name": t_name, "username": to_username(t_user)}, timeout=15)
         if r.ok:
             t = r.json()
             st.success("Hesab yaradıldı. Şifrəni indi köçür, bir daha göstərilməyəcək:")
@@ -31,7 +57,7 @@ with st.sidebar:
         else:
             st.error(r.json().get("detail", r.text) if r.headers.get("content-type", "").startswith("application/json") else r.text)
     try:
-        teachers = requests.get(f"{API_URL}/admin/teachers", headers={"X-Admin-Key": ADMIN_KEY}, timeout=10)
+        teachers = http.get(f"{API_URL}/admin/teachers", timeout=10)
         if teachers.ok:
             for t in teachers.json():
                 st.caption(f"• {t['name']} ({t['username']})")
@@ -40,7 +66,7 @@ with st.sidebar:
 
 
 def api_get(path):
-    resp = requests.get(f"{API_URL}{path}", timeout=15)
+    resp = http.get(f"{API_URL}{path}", timeout=15)
     resp.raise_for_status()
     return resp.json()
 
@@ -108,7 +134,7 @@ if submitted:
         with st.status("Gemini dərsliyi oxuyur... (PDF-də 2-4 dəqiqə çəkə bilər)", expanded=True) as status:
             st.write("Fayl göndərilir")
             try:
-                resp = requests.post(
+                resp = http.post(
                     f"{API_URL}/chapters",
                     data={"title": title, "grade": grade, "first_page": int(first_page)},
                     files={"file": (file.name, file.getvalue())},
@@ -161,7 +187,7 @@ STATUS_LABEL = {
 
 
 def api_send(method, path, **kwargs):
-    resp = requests.request(method, f"{API_URL}{path}", timeout=kwargs.pop("timeout", 30), **kwargs)
+    resp = http.request(method, f"{API_URL}{path}", timeout=kwargs.pop("timeout", 30), **kwargs)
     if not resp.ok:
         st.error(error_text(resp))
         return None
@@ -234,7 +260,7 @@ with tab_bank:
         view = st.radio("Göstər", ["Baxılmalıdır", "Hamısı", "Təsdiqlənib"], horizontal=True)
         status_filter = {"Baxılmalıdır": "needs_review", "Təsdiqlənib": "approved", "Hamısı": None}[view]
         params = {"status": status_filter} if status_filter else {}
-        resp = requests.get(f"{API_URL}/chapters/{selected}/questions", params=params, timeout=30)
+        resp = http.get(f"{API_URL}/chapters/{selected}/questions", params=params, timeout=30)
         if not resp.ok:
             st.error(f"Suallar yüklənmədi ({resp.status_code}): {error_text(resp)}")
             st.stop()

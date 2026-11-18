@@ -1,0 +1,10 @@
+# sagird + muellim tetbiqi
+{$DOMAIN} {
+	encode gzip
+	reverse_proxy api:8000
+}
+
+# admin paneli (streamlit)
+admin.{$DOMAIN} {
+	reverse_proxy ui:8501
+}

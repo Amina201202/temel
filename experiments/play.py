@@ -21,7 +21,7 @@ def call(method, path, body=None):
                          "Yoxla: docker compose logs api --tail 30")
 
 
-chapters = call("GET", "/chapters")
+chapters = call("GET", "/public/chapters")  # /chapters artiq admin ucundur
 chapter_id = chapters[0]["id"]
 print(f"Bolme: {chapters[0]['title']}\n")
 

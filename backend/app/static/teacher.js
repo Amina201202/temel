@@ -1,3 +1,6 @@
+// radarda butun movzular ya yalniz vaciblar
+let showAllConcepts = false;
+
 // Temel - muellim paneli
 const TOKEN_KEY = "temel_teacher_token";
 const $ = (id) => document.getElementById(id);
@@ -155,18 +158,29 @@ async function refreshRadar(first) {
   // kok sebebi en cox olan movzular yuxarida
   const total = Math.max(1, s.done);
   // kok ve zeif olanlar yuxarida, yoxlanmayanlar en asagida
-  const score = (c) => c.root * 1000 + c.weak * 100 + c.known * 10 - c.unknown;
-  const rows = [...r.concepts].sort((a, b) => score(b) - score(a));
+  const score = (c) => c.root * 1000 + c.weak * 100 + c.known * 10 + (c.implied || 0) - c.unknown;
+  const sorted = [...r.concepts].sort((a, b) => score(b) - score(a));
+  // evvelki siniflerin movzularini yalniz bosluq olanda gosteririk, siyahi uzanmasin
+  const isForeign = (c) => /\(\d+-c[iıu] sinif\)$/.test(c.concept);
+  const problem = (c) => c.root || c.weak;
+  const rows = showAllConcepts ? sorted : sorted.filter((c) => !isForeign(c) || problem(c));
+  const hidden = sorted.length - rows.length;
+  $("bars-more").hidden = !s.done || (!hidden && !showAllConcepts);
+  $("bars-more").textContent = showAllConcepts
+    ? "Yalnız vacibləri göstər"
+    : `+ əvvəlki siniflərdən ${hidden} mövzu, boşluq tapılmayıb · Hamısını göstər`;
   $("bars").innerHTML = rows.map((c) => {
     const w = (n) => `${(n / total) * 100}%`;
     const parts = [];
     if (c.root) parts.push(`${c.root} kök`);
     if (c.weak) parts.push(`${c.weak} zəif`);
     if (c.known) parts.push(`${c.known} bilir`);
+    if (c.implied) parts.push(`${c.implied} yəqin bilir`);
     return `<div class="bar-row"><div class="label"><b>${esc(c.concept)}</b><span>${parts.join(" · ") || "—"}</span></div>
       <div class="track" role="img" aria-label="${esc(c.concept)}: ${parts.join(", ")}">
         <i class="root" style="width:${w(c.root)}"></i><i class="weak" style="width:${w(c.weak)}"></i>
-        <i class="known" style="width:${w(c.known)}"></i><i class="unknown" style="width:${w(c.unknown)}"></i></div></div>`;
+        <i class="known" style="width:${w(c.known)}"></i><i class="implied" style="width:${w(c.implied || 0)}"></i>
+        <i class="unknown" style="width:${w(c.unknown)}"></i></div></div>`;
   }).join("") || `<div class="empty">Şagirdlər bitirdikcə radar dolacaq.</div>`;
   if (!s.done) $("bars").innerHTML = `<div class="empty">Hələ heç kim testi bitirməyib. Radar ilk nəticə ilə dolacaq.</div>`;
 
@@ -183,6 +197,11 @@ async function refreshRadar(first) {
   }).join("") : `<div class="empty">Şagirdlər koda qoşulanda burada görünəcək.</div>`;
   document.querySelectorAll("[data-st]").forEach((b) => (b.onclick = () => openStudent(Number(b.dataset.st))));
 }
+
+$("bars-more").onclick = () => {
+  showAllConcepts = !showAllConcepts;
+  refreshRadar(false);
+};
 
 async function openStudent(attemptId) {
   const d = await api("GET", `/teacher/sessions/${currentSession}/students/${attemptId}`);
