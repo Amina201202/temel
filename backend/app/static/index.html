@@ -7,6 +7,15 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="style.css">
+  <!-- PWA: telefona tetbiq kimi qurasdirmaq ucun -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#3D4BE0">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Təməl">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
 </head>
 <body>
 <main class="phone">
@@ -50,6 +59,9 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
       Real adını yazma. Nəticələr yalnız ləqəblə saxlanır.
     </p>
+
+    <button id="install-btn" class="btn install" type="button" hidden>📲 Telefona quraşdır</button>
+    <p id="ios-hint" class="install-hint" hidden>📲 Tətbiq kimi quraşdırmaq üçün: <b>Paylaş</b> düyməsi → <b>Ana ekrana əlavə et</b></p>
   </section>
 
   <!-- 2. Test -->

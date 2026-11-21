@@ -29,6 +29,7 @@ from .extract import ExtractionError, extract_graph, transcribe_pdf
 from .models import Attempt, AttemptAnswer, Chapter, ClassSession, Concept, ConceptEdge, QuestionTemplate
 from .questions import build_checked_templates, build_instance
 from .teacher import router as teacher_router
+from .tts import explanation_text, synthesize
 from .schemas import (AnswerIn, AttemptIn, AttemptStep, ChapterOut, ConceptOut, EdgeOut, Feedback, GraphOut,
                       OptionOut, PublicQuestion, QuestionOut, QuestionStats, StatusIn)
 
@@ -83,8 +84,10 @@ from google.genai import errors as genai_errors
 @app.exception_handler(genai_errors.APIError)
 def gemini_error(request: Request, exc: genai_errors.APIError):
     logging.warning("Gemini xetasi: %s %s", exc.code, exc.message)
-    if exc.code == 402:
-        msg = "Gemini krediti bitib. AI Studio-da balansı artır və yenidən yoxla."
+    billing = "billing" in (exc.message or "").lower()
+    if exc.code == 402 or (exc.code == 403 and billing):
+        msg = "AI xidmətinin balansında problem var (ödəniş). Bir az sonra yenidən yoxla."
+        logging.error("GEMINI BALANSI: AI Studio-da odenis lazimdir - %s", exc.message)
     elif exc.code == 429:
         msg = "Gemini limitinə çatdıq. 1 dəqiqə gözlə və yenidən yoxla."
     else:
@@ -537,6 +540,8 @@ def attempt_explanation(attempt_id: int, body: TokenIn, db: Session = Depends(ge
                       "correct_value": w.correct_value, "misconception": w.misconception} for w in wrong]
     try:
         exp = generate_explanation(root, d["weak_because"], wrong_answers, pages, chapter.grade)
+    except genai_errors.APIError:
+        raise  # handler aydin mesaj qaytarir
     except Exception as e:  # noqa: BLE001
         logger.exception("izah alinmadi")
         raise HTTPException(502, "AI izahı hazırlaya bilmədi, bir az sonra yenidən cəhd et") from e
@@ -554,6 +559,29 @@ class AskIn(BaseModel):
 
 
 ASK_LIMIT = 5
+
+
+TTS_DIR = Path(os.getenv("TTS_CACHE_DIR", "/tmp/temel_tts"))
+
+
+@app.post("/attempts/{attempt_id}/explanation/audio")
+def explanation_audio(attempt_id: int, body: TokenIn, db: Session = Depends(get_db)):
+    """Izahi sesle oxuyur. Her test ucun bir defe yaradilir, sonra diskden verilir."""
+    attempt = get_attempt(db, attempt_id, body.token)
+    exp = (attempt.diagnosis or {}).get("explanation")
+    if not exp:
+        raise HTTPException(409, "Əvvəlcə izah hazırlanmalıdır")
+    TTS_DIR.mkdir(parents=True, exist_ok=True)
+    path = TTS_DIR / f"{attempt.id}.wav"
+    if not path.exists():
+        try:
+            path.write_bytes(synthesize(explanation_text(exp)))
+        except genai_errors.APIError:
+            raise  # yuxaridaki handler aydin mesaj qaytarir
+        except Exception as e:  # noqa: BLE001
+            logger.exception("ses yaradilmadi")
+            raise HTTPException(502, "Səsli izah hazırlana bilmədi, bir az sonra yenidən cəhd et") from e
+    return Response(path.read_bytes(), media_type="audio/wav", headers={"Cache-Control": "private, max-age=86400"})
 
 
 @app.post("/attempts/{attempt_id}/ask")

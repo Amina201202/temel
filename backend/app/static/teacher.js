@@ -15,7 +15,7 @@ function esc(t) {
 }
 
 async function api(method, path, body) {
-  const headers = {};
+  const headers = { "ngrok-skip-browser-warning": "1" };  // ngrok xeberdarliq sehifesi ucun
   if (body) headers["Content-Type"] = "application/json";
   if (token) headers["Authorization"] = `Bearer ${token}`;
   const resp = await fetch(path, { method, headers, body: body ? JSON.stringify(body) : undefined });

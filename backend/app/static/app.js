@@ -36,7 +36,8 @@ function mathHtml(text) {
 async function api(method, path, body) {
   const resp = await fetch(API + path, {
     method,
-    headers: body ? { "Content-Type": "application/json" } : {},
+    // ngrok-un pulsuz planinda xeberdarliq sehifesi API sorgularina mane olmasin
+    headers: body ? { "Content-Type": "application/json", "ngrok-skip-browser-warning": "1" } : { "ngrok-skip-browser-warning": "1" },
     body: body ? JSON.stringify(body) : undefined,
   });
   let data = null;
@@ -252,8 +253,45 @@ function renderMap(d) {
   }).join("") + more;
 }
 
+// ---------- sesli izah ----------
+let listenAudio = null;
+
+async function toggleListen() {
+  const btn = $("listen-btn");
+  const err = $("listen-err");
+  err.hidden = true;
+  if (listenAudio && !listenAudio.paused) { listenAudio.pause(); btn.textContent = "▶ Davam et"; return; }
+  if (listenAudio) { listenAudio.play(); btn.textContent = "⏸ Dayandır"; return; }
+  btn.disabled = true;
+  btn.textContent = "⏳ Səs hazırlanır...";
+  try {
+    const resp = await fetch(`/attempts/${attempt.attempt_id}/explanation/audio`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "1" },
+      body: JSON.stringify({ token: attempt.token }),
+    });
+    if (!resp.ok) {
+      const j = await resp.json().catch(() => ({}));
+      throw new Error(j.detail || "Səsli izah hazırlana bilmədi");
+    }
+    listenAudio = new Audio(URL.createObjectURL(await resp.blob()));
+    listenAudio.onended = () => { btn.textContent = "🔊 Yenidən dinlə"; };
+    await listenAudio.play();
+    btn.textContent = "⏸ Dayandır";
+  } catch (e) {
+    listenAudio = null;
+    btn.textContent = "🔊 Yenidən cəhd et";
+    err.textContent = e.message;
+    err.hidden = false;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 async function loadExplanation(d) {
   const box = $("explain");
+  // evvelki testin sesini dayandiririq
+  if (listenAudio) { listenAudio.pause(); listenAudio = null; }
   // evvelki testden qalan sual formasini ve cavablari temizleyirik
   $("ask-form").hidden = true;
   $("ask-answers").innerHTML = "";
@@ -268,11 +306,14 @@ async function loadExplanation(d) {
     if (!e) { box.hidden = true; return; }
     box.innerHTML = `<span class="ai">Sənə özəl izah</span>
       <h3>${esc(e.headline)}</h3>
+      <button id="listen-btn" class="listen" type="button">🔊 İzahı dinlə</button>
+      <span id="listen-err" class="listen-err" hidden></span>
       <p>${mathHtml(e.why)}</p>
       <div class="box"><b>Qayda</b>${mathHtml(e.rule)}</div>
       <div class="box"><b>Nümunə</b>${mathHtml(e.example)}</div>
       <div class="tip">💡 ${mathHtml(e.tip)}</div>
       ${e.source_page ? `<span class="src">Mənbə: Riyaziyyat ${e.source_grade || 5}, səh. ${e.source_page}</span>` : ""}`;
+    $("listen-btn").onclick = toggleListen;
     $("ask-topic").textContent = `(yalnız «${d.roots[0]}» haqqında)`;
     $("ask-form").hidden = false;
   } catch (err) {
@@ -397,3 +438,34 @@ $("restart-btn").onclick = () => { clearAttempt(); attempt = null; show("screen-
   }
   show("screen-start");
 })();
+
+
+// ---------- PWA: tetbiq kimi qurasdirma ----------
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+
+let installEvent = null;
+const standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+
+// android/chrome: brauzer icaze verende duymeni gosteririk
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  installEvent = e;
+  $("install-btn").hidden = false;
+});
+
+$("install-btn").onclick = async () => {
+  if (!installEvent) return;
+  installEvent.prompt();
+  await installEvent.userChoice;
+  installEvent = null;
+  $("install-btn").hidden = true;
+};
+
+window.addEventListener("appinstalled", () => { $("install-btn").hidden = true; });
+
+// iphone-da bu hadise yoxdur, ona gore qisa izah gosteririk
+if (/iphone|ipad|ipod/i.test(navigator.userAgent) && !standalone) {
+  $("ios-hint").hidden = false;
+}

@@ -1,0 +1,17 @@
+{
+  "name": "Təməl — Sənin bilik radarın",
+  "short_name": "Təməl",
+  "description": "Riyaziyyatda nəyi bilmədiyini 10 dəqiqədə tap.",
+  "lang": "az",
+  "start_url": "/app/",
+  "scope": "/app/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F4F5FA",
+  "theme_color": "#3D4BE0",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

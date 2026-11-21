@@ -169,3 +169,14 @@ input[type=text]:focus { outline: 2px solid var(--accent); outline-offset: 1px; 
 .pill.implied { background: var(--good-soft); color: var(--good); opacity: .6; }
 .dot.implied { background: #3FA57A; opacity: .45; }
 .map-more { font-size: 13px; margin: 4px 2px 0; }
+
+/* PWA qurasdirma */
+.btn.install { background: var(--card, #fff); color: var(--accent, #3D4BE0); border: 2px solid var(--accent, #3D4BE0); }
+.install-hint { font-size: 13px; line-height: 1.45; color: var(--muted); text-align: center; margin: 0; }
+
+/* sesli izah */
+.listen { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 16px;
+  border-radius: 999px; border: 1.5px solid var(--accent); background: var(--accent-soft, #E8EAFD); color: var(--accent-ink, #2A35B8);
+  font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; margin: 4px 0 8px; }
+.listen:disabled { opacity: .7; cursor: wait; }
+.listen-err { display: block; font-size: 12px; color: var(--bad, #A8302A); margin-bottom: 6px; }
