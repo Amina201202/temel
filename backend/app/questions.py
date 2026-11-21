@@ -168,8 +168,15 @@ def render_text(text, env):
     return tidy_signs(out)
 
 
+SUPER = str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹")
+
+
 def tidy_signs(text):
-    """Menfi reqem dusende "5x² + -3x" yox, "5x² − 3x" olsun."""
+    """Menfi reqem dusende "5x² + -3x" yox, "5x² − 3x" olsun. x^2 -> x², 2*x -> 2·x."""
+    text = re.sub(r"\*\*\s*(\d+)", lambda m: m.group(1).translate(SUPER), text)
+    text = re.sub(r"\^\s*\(?(\d+)\)?", lambda m: m.group(1).translate(SUPER), text)
+    text = re.sub(r"(\d)\s*\*\s*(?=[a-zA-Z(])", r"\1", text)  # 3*x -> 3x
+    text = re.sub(r"\s*\*\s*", " · ", text)
     text = re.sub(r"\+\s*[-−]\s*(?=\d)", "− ", text)
     text = re.sub(r"(?<=[\w)²³])\s*[-−]\s*[-−]\s*(?=\d)", " + ", text)
     return text
@@ -199,7 +206,7 @@ def build_instance(tpl, seed=None, tries=30, reasons=None):
         if not is_valid(answer):
             continue
 
-        correct_label = format_value(answer, fmt)
+        correct_label = tidy_signs(format_value(answer, fmt))
         options = [{"value": correct_label, "correct": True, "misconception": None, "points_to": None}]
         seen = {correct_label}
         collided = []
@@ -211,7 +218,7 @@ def build_instance(tpl, seed=None, tries=30, reasons=None):
                 continue
             if not is_valid(val):
                 continue
-            label = format_value(val, fmt)
+            label = tidy_signs(format_value(val, fmt))
             if label == correct_label:
                 collided.append(i)
                 continue

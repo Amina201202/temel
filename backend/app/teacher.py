@@ -47,7 +47,22 @@ def create_teacher(body: TeacherIn, db: Session = Depends(get_db)):
 @router.get("/admin/teachers", dependencies=[Depends(require_admin)])
 def list_teachers(db: Session = Depends(get_db)):
     rows = db.scalars(select(Teacher).order_by(Teacher.id)).all()
-    return [{"id": t.id, "name": t.name, "username": t.username} for t in rows]
+    sessions = dict(db.execute(select(ClassSession.teacher_id, func.count()).group_by(ClassSession.teacher_id)).all())
+    return [{"id": t.id, "name": t.name, "username": t.username, "sessions": sessions.get(t.id, 0),
+             "created_at": t.created_at.strftime("%Y-%m-%d") if t.created_at else ""} for t in rows]
+
+
+@router.post("/admin/teachers/{teacher_id}/reset-password", dependencies=[Depends(require_admin)])
+def reset_password(teacher_id: int, db: Session = Depends(get_db)):
+    """Muellim sifreni unudanda: yeni sifre yaradilir ve bir defe gosterilir."""
+    t = db.get(Teacher, teacher_id)
+    if t is None:
+        raise HTTPException(404, "Müəllim tapılmadı")
+    password = generate_password()
+    t.password_hash = hash_password(password)
+    db.commit()
+    clear_fails(t.username)  # sehv cehdlere gore bloklanibsa, aciriq
+    return {"id": t.id, "name": t.name, "username": t.username, "password": password}
 
 
 # ---------- giris ----------
@@ -215,4 +230,136 @@ def student_detail(session_id: int, attempt_id: int, teacher: Teacher = Depends(
         "answers": [{"concept": x.concept, "question": x.question_text, "chosen": x.chosen,
                      "correct_value": x.correct_value, "correct": x.correct, "misconception": x.misconception}
                     for x in answers],
+    }
+
+
+# ---------- umumi baxis: muellimin butun sessiyalari birlikde ----------
+
+def teacher_attempts(db: Session, teacher: Teacher):
+    """Muellimin butun sessiyalari ve onlardaki testler."""
+    sessions = db.scalars(select(ClassSession).where(ClassSession.teacher_id == teacher.id)
+                          .order_by(ClassSession.created_at)).all()
+    by_id = {s.id: s for s in sessions}
+    attempts = db.scalars(select(Attempt).where(Attempt.session_id.in_(list(by_id) or [-1]))
+                          .order_by(Attempt.started_at)).all() if by_id else []
+    return sessions, by_id, attempts
+
+
+@router.get("/teacher/overview")
+def overview(teacher: Teacher = Depends(current_teacher), db: Session = Depends(get_db)):
+    sessions, by_id, attempts = teacher_attempts(db, teacher)
+    done = [a for a in attempts if a.status == "done" and a.diagnosis]
+    titles = {c.id: c.title for c in db.scalars(select(Chapter)).all()}
+
+    # en cox rast gelinen kok sebebler: hansi siniflerde
+    root_count, root_classes = Counter(), {}
+    for a in done:
+        for r in a.diagnosis.get("roots", []):
+            root_count[r] += 1
+            root_classes.setdefault(r, set()).add(by_id[a.session_id].class_name)
+    top_roots = [{"concept": r, "count": n, "classes": sorted(root_classes[r])}
+                 for r, n in root_count.most_common(8)]
+
+    # sinifler uzre muqayise
+    classes = {}
+    for s in sessions:
+        c = classes.setdefault(s.class_name, {"class_name": s.class_name, "sessions": 0, "students": 0,
+                                              "done": 0, "answered": 0, "correct": 0, "no_gap": 0,
+                                              "roots": Counter(), "chapters": set()})
+        c["sessions"] += 1
+        c["chapters"].add(titles.get(s.chapter_id, ""))
+    for a in attempts:
+        c = classes[by_id[a.session_id].class_name]
+        c["students"] += 1
+        if a in done:
+            d = a.diagnosis
+            c["done"] += 1
+            c["answered"] += d.get("answered", 0)
+            c["correct"] += d.get("correct", 0)
+            c["roots"].update(d.get("roots", []))
+            if not d.get("roots"):
+                c["no_gap"] += 1
+    class_rows = []
+    for c in classes.values():
+        top = c["roots"].most_common(1)
+        class_rows.append({
+            "class_name": c["class_name"], "sessions": c["sessions"], "students": c["students"],
+            "done": c["done"], "no_gap": c["no_gap"],
+            "accuracy": round(100 * c["correct"] / c["answered"]) if c["answered"] else None,
+            "top_root": top[0][0] if top else None, "top_root_count": top[0][1] if top else 0,
+            "chapters": sorted(x for x in c["chapters"] if x),
+        })
+    class_rows.sort(key=lambda r: -r["students"])
+
+    return {
+        "sessions": len(sessions), "students": len(attempts), "done": len(done),
+        "no_gap": sum(1 for a in done if not a.diagnosis.get("roots")),
+        "top_roots": top_roots, "classes": class_rows,
+    }
+
+
+@router.get("/teacher/export.csv")
+def export_csv(teacher: Teacher = Depends(current_teacher), db: Session = Depends(get_db)):
+    """Butun neticeler Excel-de acilan CSV kimi."""
+    import csv
+    import io
+    from fastapi.responses import Response
+
+    sessions, by_id, attempts = teacher_attempts(db, teacher)
+    titles = {c.id: c.title for c in db.scalars(select(Chapter)).all()}
+    buf = io.StringIO()
+    w = csv.writer(buf, delimiter=";")  # az/ru Excel noqteli vergulu gozleyir
+    w.writerow(["Sinif", "Mövzu", "Kod", "Şagird", "Status", "Sual", "Düz", "Faiz",
+                "Kök səbəb", "Başladı", "Müddət (dəq)"])
+    for a in attempts:
+        s = by_id[a.session_id]
+        d = a.diagnosis or {}
+        answered, correct = d.get("answered"), d.get("correct")
+        minutes = round((a.finished_at - a.started_at).total_seconds() / 60, 1) if a.finished_at else ""
+        w.writerow([s.class_name, titles.get(s.chapter_id, ""), s.join_code, a.nickname,
+                    "bitirdi" if a.status == "done" else "yarımçıq",
+                    answered or "", correct if correct is not None else "",
+                    f"{round(100 * correct / answered)}%" if answered else "",
+                    ", ".join(d.get("roots", [])), a.started_at.strftime("%Y-%m-%d %H:%M"), minutes])
+    # BOM: Excel az herflerini duz gostersin
+    return Response("﻿" + buf.getvalue(), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": 'attachment; filename="temel_neticeler.csv"'})
+
+
+# ---------- admin: butun testler (kodlu ve kodsuz) ----------
+
+@router.get("/admin/attempts", dependencies=[Depends(require_admin)])
+def admin_attempts(db: Session = Depends(get_db)):
+    titles = {c.id: (c.title, c.grade) for c in db.scalars(select(Chapter)).all()}
+    classes = {s.id: s.class_name for s in db.scalars(select(ClassSession)).all()}
+    rows = []
+    for a in db.scalars(select(Attempt).order_by(Attempt.id.desc())).all():
+        d = a.diagnosis or {}
+        title, grade = titles.get(a.chapter_id, ("", None))
+        rows.append({
+            "id": a.id, "nickname": a.nickname, "chapter": title, "grade": grade,
+            "class_name": classes.get(a.session_id) or "— kodsuz —",
+            "status": "bitirdi" if a.status == "done" else "yarımçıq",
+            "answered": d.get("answered"), "correct": d.get("correct"),
+            "roots": d.get("roots", []),
+            "minutes": round((a.finished_at - a.started_at).total_seconds() / 60, 1) if a.finished_at else None,
+            "started_at": a.started_at.strftime("%Y-%m-%d %H:%M"),
+        })
+    return rows
+
+
+@router.get("/admin/attempts/{attempt_id}", dependencies=[Depends(require_admin)])
+def admin_attempt_detail(attempt_id: int, db: Session = Depends(get_db)):
+    a = db.get(Attempt, attempt_id)
+    if a is None:
+        raise HTTPException(404, "Tapılmadı")
+    answers = db.scalars(select(AttemptAnswer).where(AttemptAnswer.attempt_id == a.id)
+                         .order_by(AttemptAnswer.id)).all()
+    d = a.diagnosis or {}
+    return {
+        "nickname": a.nickname, "roots": d.get("roots", []), "weak_because": d.get("weak_because", {}),
+        "explanation": (d.get("explanation") or {}).get("headline"),
+        "answers": [{"concept": x.concept, "question": x.question_text, "chosen": x.chosen,
+                     "correct_value": x.correct_value, "correct": x.correct,
+                     "misconception": x.misconception} for x in answers],
     }

@@ -631,6 +631,16 @@ def get_attempt_state(attempt_id: int, token: str, db: Session = Depends(get_db)
     return finish_or_ask(get_attempt(db, attempt_id, token), db)
 
 
+@app.get("/public/sessions/{code}")
+def public_session(code: str, db: Session = Depends(get_db)):
+    """Sagird kodu yazanda hansi sinfe qosuldugunu gorsun."""
+    cs = db.scalar(select(ClassSession).where(ClassSession.join_code == code.strip(), ClassSession.active.is_(True)))
+    if cs is None:
+        raise HTTPException(404, "Bu kodla aktiv sessiya tapılmadı")
+    ch = db.get(Chapter, cs.chapter_id)
+    return {"class_name": cs.class_name, "chapter_title": ch.title if ch else "", "grade": ch.grade if ch else None}
+
+
 @app.get("/public/chapters")
 def public_chapters(db: Session = Depends(get_db)):
     # sagird yalniz tesdiqlenmis suali olan bolmeleri gorur

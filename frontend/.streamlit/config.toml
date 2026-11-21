@@ -1,5 +1,23 @@
 [theme]
+font = "sans serif"
+
+# ag tema
+[theme.light]
 primaryColor = "#3D4BE0"
+backgroundColor = "#F4F5FA"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#15172B"
+
+# qaranliq tema
+[theme.dark]
+primaryColor = "#6E7BFF"
+backgroundColor = "#11121A"
+secondaryBackgroundColor = "#1A1C27"
+textColor = "#E9EAF2"
 
 [server]
 maxUploadSize = 15
+
+[client]
+# deploy ve developer duymeleri gizli, amma menyuda tema secimi qalir
+toolbarMode = "viewer"

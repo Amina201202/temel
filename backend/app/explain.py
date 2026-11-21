@@ -61,6 +61,8 @@ def generate_explanation(root, weak_because, wrong_answers, pages, grade=5):
             response_mime_type="application/json",
             response_schema=Explanation,
             temperature=0.3,
+            # dusunme qalir, amma limitle: keyfiyyet ucun lazimdir, xerc ise azalir
+            thinking_config=types.ThinkingConfig(thinking_budget=1024),
         ),
     )
     exp = resp.parsed

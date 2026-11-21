@@ -60,7 +60,9 @@ def check_input(question: str, concept: str) -> str:
         model=MODEL,
         contents=TOPIC_PROMPT.format(concept=concept, question=q.replace(">>>", "")),
         config=types.GenerateContentConfig(response_mime_type="application/json",
-                                           response_schema=TopicCheck, temperature=0),
+                                           response_schema=TopicCheck, temperature=0,
+                                           # sade he/yox sualidir, dusunmeye ehtiyac yoxdur
+                                           thinking_config=types.ThinkingConfig(thinking_budget=0)),
     )
     if resp.parsed is None or not resp.parsed.on_topic:
         raise GuardBlock("topic", f"Mən yalnız «{concept}» və riyaziyyat haqqında kömək edə bilərəm.")
@@ -93,7 +95,9 @@ def answer_question(question, concept, pages, grade=5):
         model=MODEL,
         contents=ANSWER_PROMPT.format(grade=grade_label(grade), concept=concept, pages=page_text, question=question.replace(">>>", "")),
         config=types.GenerateContentConfig(response_mime_type="application/json",
-                                           response_schema=Answer, temperature=0.2),
+                                           response_schema=Answer, temperature=0.2,
+                                           # qisa cavabdir, az dusunme kifayetdir
+                                           thinking_config=types.ThinkingConfig(thinking_budget=512)),
     )
     ans = resp.parsed
     if ans is None:

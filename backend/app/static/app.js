@@ -417,6 +417,35 @@ $("restart-btn").onclick = () => { clearAttempt(); attempt = null; show("screen-
 
 // ---------- basla: yarimciq test varsa davam et ----------
 
+// ---------- kod yazilanda sinfi gosteririk ----------
+let codeTimer = null;
+
+async function checkCode() {
+  const code = $("join-code").value.trim();
+  const info = $("code-info");
+  if (code.length < 4) {
+    info.hidden = true;
+    $("chapter-field").hidden = false;
+    return;
+  }
+  try {
+    const s = await api("GET", `/public/sessions/${encodeURIComponent(code)}`);
+    info.className = "code-info ok";
+    info.textContent = `✓ ${s.class_name} sinfi · ${s.chapter_title}${s.grade ? ` (${gradeLabel(s.grade)} sinif)` : ""}`;
+    $("chapter-field").hidden = true;  // movzunu muellim secib
+  } catch (e) {
+    info.className = "code-info bad";
+    info.textContent = "✗ Bu kodla aktiv sessiya tapılmadı. Kodu müəllimdən yoxla.";
+    $("chapter-field").hidden = false;
+  }
+  info.hidden = false;
+}
+
+$("join-code").addEventListener("input", () => {
+  clearTimeout(codeTimer);
+  codeTimer = setTimeout(checkCode, 350);  // her herfde sorgu getmesin
+});
+
 (async function init() {
   loadChapters();
   // QR-dan gelende kod linkde olur: /app/?code=4821
@@ -424,6 +453,7 @@ $("restart-btn").onclick = () => { clearAttempt(); attempt = null; show("screen-
   if (code) {
     $("join-code").value = code;
     $("chapter-field").hidden = true;
+    checkCode();
   }
   const saved = loadAttempt();
   if (saved) {

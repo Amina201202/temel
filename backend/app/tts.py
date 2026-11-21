@@ -11,10 +11,18 @@ from .extract import get_client
 TTS_MODEL = os.getenv("GEMINI_TTS_MODEL", "gemini-2.5-flash-preview-tts")
 VOICE = os.getenv("GEMINI_TTS_VOICE", "Kore")
 MAX_CHARS = 1500  # cox uzun metn hem gec, hem baha olur
+ABBREV = {"ƏKOB": "ən kiçik ortaq bölünən", "ƏBOB": "ən böyük ortaq bölən",
+          "əkob": "ən kiçik ortaq bölünən", "əbob": "ən böyük ortaq bölən"}
 
 
 def speakable(text):
     """Riyazi isareleri sozle yaziriq ki, model duz oxusun: x² -> x kvadrat."""
+    # qisaltmalari model duz oxuya bilmir, tam formasini yaziriq
+    # ƏKOB-u -> bolunenI: tam forma "ə" ile bitir, sekilcini ahenge uygun ceviririk
+    harmony = str.maketrans("aıuo", "əiiö")
+    for short, full in ABBREV.items():
+        text = re.sub(rf"\b{short}(?:-(\w+))?(?=\W|$)",
+                      lambda m: full + (m.group(1).translate(harmony) if m.group(1) else ""), text)
     t = text.replace("²", " kvadrat").replace("³", " kub")
     t = t.replace("√", " kök altında ")
     t = re.sub(r"x₁", "x bir", t)

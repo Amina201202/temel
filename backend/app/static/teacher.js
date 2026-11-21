@@ -80,7 +80,54 @@ async function openHome() {
     </div>`).join("") : `<div class="empty">Hələ sessiya yoxdur. Yuxarıdan birini aç.</div>`;
   document.querySelectorAll("[data-open]").forEach((b) => (b.onclick = () => openSession(Number(b.dataset.open))));
   view("home");
+  loadOverview().catch(() => {});
 }
+
+// ---------- umumi baxis ----------
+
+async function loadOverview() {
+  const o = await api("GET", "/teacher/overview");
+  $("overview").hidden = !o.sessions;
+  if (!o.sessions) return;
+  $("ov-sessions").textContent = o.sessions;
+  $("ov-students").textContent = o.students;
+  $("ov-done").textContent = o.done;
+  $("ov-nogap").textContent = o.no_gap;
+
+  const max = Math.max(1, ...o.top_roots.map((r) => r.count));
+  $("ov-roots").innerHTML = o.top_roots.length ? o.top_roots.map((r) => `
+    <div class="bar-row"><div class="label"><b>${esc(r.concept)}</b><span>${r.count} şagird · ${r.classes.map(esc).join(", ")}</span></div>
+      <div class="track"><i class="root" style="width:${(r.count / max) * 100}%"></i></div></div>`).join("")
+    : `<div class="empty">Hələ kök səbəb tapılmayıb.</div>`;
+
+  $("ov-classes").innerHTML = o.classes.map((c) => `
+    <tr><td><b>${esc(c.class_name)}</b><small>${c.chapters.map(esc).join(", ")}</small></td>
+      <td>${c.done}/${c.students}</td>
+      <td>${c.accuracy === null ? "—" : c.accuracy + "%"}</td>
+      <td>${c.top_root ? `<span class="chip">${esc(c.top_root)}</span>` : `<span class="chip ok">Boşluq yoxdur</span>`}</td></tr>`).join("");
+}
+
+// Excel ucun CSV: token header-de getdiyi ucun adi link isletmirik
+$("export-btn").onclick = async () => {
+  const btn = $("export-btn");
+  btn.disabled = true;
+  try {
+    const resp = await fetch("/teacher/export.csv", {
+      headers: { Authorization: `Bearer ${token}`, "ngrok-skip-browser-warning": "1" },
+    });
+    if (!resp.ok) throw new Error("Yükləmək alınmadı");
+    const url = URL.createObjectURL(await resp.blob());
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `temel_neticeler_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    btn.disabled = false;
+  }
+};
 
 $("new-session").onsubmit = async (ev) => {
   ev.preventDefault();
