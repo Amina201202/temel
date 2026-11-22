@@ -17,6 +17,9 @@ CHAPTERS = [
     ("8_kvadrat_kok_s008-035", "8ci sinif riy.pdf", 8, 35),
     ("8_kvadrat_tenlik_s048-072", "8ci sinif riy.pdf", 48, 72),
     ("9_kvadrat_funksiya_s053-078", "9cu sinif riy.pdf", 53, 78),
+    # 9-cu sinif 1-ci ve 2-ci bolme (kitabda sehife = pdf sehife - 2)
+    ("9_n_ci_derece_kok_s008-029", "9cu sinif riy.pdf", 8, 29),
+    ("9_cevre_s030-052", "9cu sinif riy.pdf", 30, 52),
 ]
 
 if __name__ == "__main__":

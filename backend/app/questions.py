@@ -75,9 +75,12 @@ Qaydalar:
   tam ədədlər, dəyişənlər, + - * / % **, mötərizə və bu funksiyalar:
   Rational(p, q), gcd(m, n), lcm(m, n), floor(v), abs(v), max(u, v), min(u, v), ndivisors(n),
   Frac(p, q), Mixed(w, p, q), Mix(w, p, q),
-  sqrt(n), Disc(a, b, c), Roots(a, b, c), RootsOf(r1, r2), expand(e), factor(e).
+  sqrt(n), root(a, n), ceil(v), Disc(a, b, c), Roots(a, b, c), RootsOf(r1, r2), expand(e), factor(e).
 - 8-9-cu sinif üçün:
   * sqrt(n) dəqiq kökdür: sqrt(12) -> 2√3, ondalıq kəsr YOX.
+  * n-ci dərəcədən kök: root(a, n), məs. root(54, 3) -> 3∛2, root(-8, 3) -> −2. Mətndə "∛{{a}}" və ya "⁴√{{a}}" yaz.
+  * Rasional üstlü qüvvət: a**(p/q), məs. 8**(2/3) = 4. Ədədin tam hissəsi: floor(v), yuxarı yuvarlaqlaşdırma: ceil(v).
+  * Hər dəyişən ya variables-da, ya constraints-də hesablanan olur, ikisində birdən OLMAZ. "if/elif" OLMAZ.
   * Roots(a, b, c): a·x² + b·x + c = 0 tənliyinin həqiqi kökləri ("x₁ = −2, x₂ = 3" və ya "Həqiqi kök yoxdur").
     Disc(a, b, c) = b² − 4ac. Səhv köklər üçün RootsOf(r1, r2), məs. 2a-ya bölməyi unudub:
     RootsOf((-b + sqrt(Disc(a, b, c)))/a, (-b - sqrt(Disc(a, b, c)))/a).
@@ -359,7 +362,7 @@ def repair_template(concept, tpl_data, problems, allowed):
 
 
 # AI bezen JS/riyazi isareler yazir: && || ≥ ≤ ≠ - python formasina ceviririk
-FIXES = [("&&", " and "), ("||", " or "), ("≥", ">="), ("≤", "<="), ("≠", "!="), ("−", "-"), ("×", "*")]
+FIXES = [("&&", " and "), ("||", " or "), ("≥", ">="), ("≤", "<="), ("≠", "!="), ("−", "-"), ("×", "*"), ("^", "**")]
 
 
 def fix_expr(expr):
@@ -372,10 +375,14 @@ def template_to_data(t):
     distractors = [d.model_dump() for d in t.distractors]
     for d in distractors:
         d["expr"] = fix_expr(d["expr"])
+    constraints = [fix_expr(c) for c in t.constraints]
+    # AI bezen deyiseni hem variables-a yazir, hem de "a = ..." ile hesablayir.
+    # hesablanan qalib gelir, onu variables-dan cixaririq
+    assigned = {n for n, _ in split_constraints(constraints)[0]}
     return {
         "text": t.text,
-        "variables": [v.model_dump() for v in t.variables],
-        "constraints": [fix_expr(c) for c in t.constraints],
+        "variables": [v.model_dump() for v in t.variables if v.name not in assigned],
+        "constraints": constraints,
         "answer_expr": fix_expr(t.answer_expr),
         "answer_format": t.answer_format,
         "distractors": distractors,

@@ -12,3 +12,4 @@ data/books_text/
 data/*.zip
 data/*.pdf
 data/chapters/
+data/eval/tmp/

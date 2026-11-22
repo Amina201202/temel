@@ -270,7 +270,8 @@ def generate_questions(chapter_id: int, db: Session = Depends(get_db)):
 
     # gemini cagirislarini paralel edirik, yoxsa 12 movzu bir nece deqiqe cekir
     results, errors = [], []
-    with ThreadPoolExecutor(max_workers=4) as pool:
+    # 4 isci 12 movzuda 5 deqiqeden cox cekirdi, 8 ile 2 defe tez olur
+    with ThreadPoolExecutor(max_workers=8) as pool:
         futures = [pool.submit(work, c) for c in graph.concepts]
         for f in futures:
             try:

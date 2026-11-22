@@ -152,7 +152,16 @@ def error_text(resp):
 
 
 def api_send(method, path, **kwargs):
-    resp = http.request(method, f"{API_URL}{path}", timeout=kwargs.pop("timeout", 30), **kwargs)
+    try:
+        resp = http.request(method, f"{API_URL}{path}", timeout=kwargs.pop("timeout", 30), **kwargs)
+    except requests.Timeout:
+        # backend isini davam etdirir, sadece biz gozlemeyi dayandiririq
+        st.warning("Cavab gecikdi, amma backend işi arxada davam etdirir. 1–2 dəqiqə sonra səhifəni yenilə (F5), "
+                   "düyməni təkrar basma.")
+        return None
+    except requests.RequestException as e:
+        st.error(f"Backend-ə qoşulmaq olmadı: {e}")
+        return None
     if not resp.ok:
         st.error(error_text(resp))
         return None
@@ -377,10 +386,15 @@ with st.expander("➕ Yeni bölmə yüklə", expanded=not chapters):
                     g = resp.json()
                     status.update(label="Hazırdır", state="complete")
                     st.session_state["selected_id"] = g["chapter"]["id"]
-                    st.success(f"{len(g['concepts'])} mövzu və {len(g['edges'])} asılılıq tapıldı.")
+                    # siyahi yuklemeden evvel goturulur, ona gore yeniden acmaq lazimdi
+                    st.session_state["flash"] = f"✅ {len(g['concepts'])} mövzu və {len(g['edges'])} asılılıq tapıldı."
+                    st.rerun()
                 else:
                     status.update(label="Alınmadı", state="error")
                     st.error(error_text(resp))
+
+if "flash" in st.session_state:
+    st.success(st.session_state.pop("flash"))
 
 if not chapters:
     st.stop()
@@ -414,7 +428,7 @@ with tab_map:
     st.caption("AI bu bölmənin mövzularını əvvəlki siniflərin mövzuları ilə əlaqələndirir (bal ≥ 4). Səhv əlaqəni sil.")
     if st.button("Əvvəlki siniflərlə əlaqələndir", type="primary"):
         with st.spinner("AI əlaqələri axtarır..."):
-            res = api_send("POST", f"/chapters/{selected}/link", timeout=180)
+            res = api_send("POST", f"/chapters/{selected}/link", timeout=600)
         if res is not None:
             st.success(f"{len(res['created'])} yeni əlaqə yaradıldı")
             st.rerun()
@@ -444,7 +458,7 @@ with tab_bank:
     gen_label = "Sual şablonları yarat" if stats["total"] == 0 else "Yenidən yarat (təsdiqlənmişlər qalır)"
     if b1.button(gen_label, type="primary", use_container_width=True):
         with st.status("AI sual şablonları yazır, kod onları yoxlayır...", expanded=False) as status:
-            res = api_send("POST", f"/chapters/{selected}/questions/generate", timeout=300)
+            res = api_send("POST", f"/chapters/{selected}/questions/generate", timeout=900)
             if res:
                 status.update(label=f"{res['total']} şablon hazırdır", state="complete")
                 st.rerun()

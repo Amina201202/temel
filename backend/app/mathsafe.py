@@ -9,8 +9,8 @@ import operator
 
 import re
 
-from sympy import (Basic, Integer, Rational, Symbol, divisor_count, expand, factor, floor, gcd, lcm, nan, oo,
-                   sqrt, together, zoo)
+from sympy import (Basic, Integer, Rational, Symbol, ceiling, divisor_count, expand, factor, floor, gcd, lcm, nan,
+                   oo, real_root, sqrt, together, zoo)
 
 MAX_LEN = 200
 MAX_POW = 6
@@ -78,11 +78,20 @@ def make_roots_of(*values):
     return label_roots(real)
 
 
+def safe_root(a, n):
+    # n-ci dereceden kok (9-cu sinif). tek n-de menfi ededin koku de olur: root(-8, 3) = -2
+    if not getattr(n, "is_integer", False) or not 2 <= n <= MAX_POW:
+        raise UnsafeExpression("kökün dərəcəsi 2-6 arası olmalıdır")
+    return real_root(a, n)
+
+
 FUNCS = {
     "Rational": lambda p, q: Rational(p, q),
     "gcd": gcd,
     "lcm": lcm,
     "floor": floor,
+    "ceil": ceiling,
+    "int": floor,  # AI "int(sqrt(n))" yazir, musbet ededde floor ile eynidir
     "abs": abs,
     "max": max,
     "min": min,
@@ -93,6 +102,7 @@ FUNCS = {
     "Mix": lambda w, p, q: w + Rational(p, q),
     # 8-9-cu sinif
     "sqrt": sqrt,
+    "root": safe_root,
     "Disc": disc,
     "Roots": make_roots,
     "RootsOf": make_roots_of,
@@ -161,9 +171,14 @@ def _eval(node, env):
     if isinstance(node, ast.BinOp) and type(node.op) in BIN_OPS:
         left = _eval(node.left, env)
         right = _eval(node.right, env)
-        if isinstance(node.op, ast.Pow) and (not right.is_integer or abs(right) > MAX_POW):
+        # rasional ustlu quvvet de olar (8**(2/3)), amma kicik ededlerle
+        if isinstance(node.op, ast.Pow) and (not right.is_rational or abs(right) > MAX_POW
+                                             or Rational(right).q > MAX_POW):
             raise UnsafeExpression("üst çox böyükdür")
         return BIN_OPS[type(node.op)](left, right)
+
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+        return not _eval(node.operand, env)
 
     if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.USub, ast.UAdd)):
         value = _eval(node.operand, env)
@@ -199,16 +214,29 @@ def is_valid(value):
     if isinstance(value, Basic):
         if value.free_symbols:
             return not value.has(zoo, nan, oo, -oo)
-        return bool(value.is_finite)
+        # (-8)**(1/3) kompleks eded olur, onu istemirik
+        return bool(value.is_finite) and value.is_real is not False
     return False
+
+
+ROOT_SIGN = {2: "√", 3: "∛", 4: "∜"}
+SUP = str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹")
+
+
+def _root_sign(m):
+    base, p, q = m.group(1), int(m.group(2)), int(m.group(3))
+    sign = ROOT_SIGN.get(q, str(q).translate(SUP) + "√")
+    return sign + base if p == 1 else f"{sign}({base}{str(p).translate(SUP)})"
 
 
 def pretty_expr(value):
     # sympy yazisini sagird ucun: x**2 -> x², 2*x -> 2x, sqrt(3) -> √3
     t = str(value)
     t = re.sub(r"sqrt\((\d+)\)", r"√\1", t)
+    # 2**(1/3) -> ∛2, 2**(2/3) -> ∛(2²)
+    t = re.sub(r"(\d+)\*\*\((\d+)/(\d+)\)", _root_sign, t)
     t = t.replace("**2", "²").replace("**3", "³")
-    t = re.sub(r"(\d)\*([x√(])", r"\1\2", t)
+    t = re.sub(r"(\d)\*([x√∛∜⁵⁶(])", r"\1\2", t)
     t = t.replace(")*(", ")(").replace("*", "·")
     # irrasional kesrde "/" etrafinda bosluq: ekranda √(3/2) kimi gorunmesin
     t = re.sub(r"(?<=[√\w)])/(?=\d)", " / ", t) if "√" in t or "x" in t else t
