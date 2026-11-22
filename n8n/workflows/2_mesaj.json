@@ -1,0 +1,58 @@
+{
+  "id": "TemelMesajGonder",
+  "name": "Təməl · Mesaj göndər",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "temel-message",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4782db70-2090-4441-8756-e2c88e83d1f2",
+      "webhookId": "f225b9b3-6171-4f23-8176-9a7ad4b911cc"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.body.chat_id }}",
+        "text": "={{ $json.body.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        0
+      ],
+      "id": "9ce1a4f4-856a-4867-87ef-126431beb944"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "pinData": {}
+}

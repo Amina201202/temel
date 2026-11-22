@@ -29,6 +29,7 @@ from .extract import ExtractionError, extract_graph, transcribe_pdf
 from .models import Attempt, AttemptAnswer, Chapter, ClassSession, Concept, ConceptEdge, QuestionTemplate
 from .questions import build_checked_templates, build_instance
 from .teacher import router as teacher_router
+from .notify import router as notify_router, set_webhook
 from .tts import explanation_text, synthesize
 from .schemas import (AnswerIn, AttemptIn, AttemptStep, ChapterOut, ConceptOut, EdgeOut, Feedback, GraphOut,
                       OptionOut, PublicQuestion, QuestionOut, QuestionStats, StatusIn)
@@ -67,6 +68,7 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(engine)
     saver, pool = make_checkpointer()
     GRAPH = build_graph(saver)
+    set_webhook()
     yield
     if pool:
         pool.close()
@@ -94,6 +96,7 @@ def gemini_error(request: Request, exc: genai_errors.APIError):
         msg = f"AI xidməti cavab vermədi ({exc.code}). Bir az sonra yenidən yoxla."
     return JSONResponse(status_code=503, content={"detail": msg})
 app.include_router(teacher_router)
+app.include_router(notify_router)
 
 
 @app.middleware("http")
@@ -588,6 +591,11 @@ def explanation_audio(attempt_id: int, body: TokenIn, db: Session = Depends(get_
 @app.post("/attempts/{attempt_id}/ask")
 def ask_question(attempt_id: int, body: AskIn, db: Session = Depends(get_db)):
     attempt = get_attempt(db, attempt_id, body.token)
+    return answer_for_attempt(db, attempt, body.question)
+
+
+def answer_for_attempt(db, attempt, question_text):
+    """"Sualın var?" - hem tetbiqden, hem de Telegram botundan (notify.py) cagirilir."""
     d = attempt.diagnosis
     if attempt.status != "done" or not d or not d["roots"]:
         raise HTTPException(409, "Sual vermək üçün əvvəlcə testi bitir")
@@ -609,7 +617,7 @@ def ask_question(attempt_id: int, body: AskIn, db: Session = Depends(get_db)):
     info = (d.get("meta") or {}).get(concept)
     src_chapter_id = info["chapter_id"] if info else attempt.chapter_id
     try:
-        question = check_input(body.question, concept)
+        question = check_input(question_text, concept)
         store().setex(key, 24 * 3600, used + 1)
         # movzunun oz sehifesi + suala en uygun sehifeler (tekrarsiz)
         plain = info["name"] if info else concept

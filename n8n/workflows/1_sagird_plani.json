@@ -1,0 +1,168 @@
+{
+  "id": "TemelSagirdPlan1",
+  "name": "Təməl · Şagird planı (3 gün)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "temel-student",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "1f199276-b9f6-435a-aa3f-7752b83dee90",
+      "webhookId": "9853f748-1472-4a79-8259-f0ff2685f5a3"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.body.chat_id }}",
+        "text": "={{ $json.body.day1 }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Gün 1",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        0
+      ],
+      "id": "03a228a7-7df2-4d9e-bb0e-0d3cc6ca74a7"
+    },
+    {
+      "parameters": {
+        "amount": "={{ $('Webhook').item.json.body.wait_minutes }}",
+        "unit": "minutes"
+      },
+      "name": "1 gün gözlə",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        0
+      ],
+      "id": "e3aa86a2-d1e4-4847-ade5-14173281bf04",
+      "webhookId": "f0c0beac-b7b1-497f-9d4a-c403cebd6262"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Webhook').item.json.body.chat_id }}",
+        "text": "={{ $('Webhook').item.json.body.day2 }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Gün 2",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        720,
+        0
+      ],
+      "id": "98cb620a-b80a-43eb-ba77-4c747f14babb"
+    },
+    {
+      "parameters": {
+        "amount": "={{ $('Webhook').item.json.body.wait_minutes }}",
+        "unit": "minutes"
+      },
+      "name": "1 gün gözlə (2)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        960,
+        0
+      ],
+      "id": "16f3f358-24ab-40a0-830b-bfd0269e3e81",
+      "webhookId": "cbe73558-d408-4868-81d5-7124de46b271"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Webhook').item.json.body.chat_id }}",
+        "text": "={{ $('Webhook').item.json.body.day3 }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Gün 3",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1200,
+        0
+      ],
+      "id": "2d815689-be0b-49d6-803f-d0bdac0c6a67"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Gün 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gün 1": {
+      "main": [
+        [
+          {
+            "node": "1 gün gözlə",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1 gün gözlə": {
+      "main": [
+        [
+          {
+            "node": "Gün 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gün 2": {
+      "main": [
+        [
+          {
+            "node": "1 gün gözlə (2)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1 gün gözlə (2)": {
+      "main": [
+        [
+          {
+            "node": "Gün 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "pinData": {}
+}

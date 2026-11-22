@@ -348,7 +348,23 @@ $("ask-form").onsubmit = async (ev) => {
   }
 };
 
-$("plan-btn").onclick = () => { renderPlan(lastDiagnosis); show("screen-plan"); };
+$("plan-btn").onclick = () => { renderPlan(lastDiagnosis); show("screen-plan"); prepareTelegram(); };
+
+// Telegram linkini evvelceden aliriq ki, duyme adi link olsun (popup bloklanmasin)
+async function prepareTelegram() {
+  const btn = $("tg-btn");
+  btn.hidden = true;
+  $("tg-hint").hidden = true;
+  if (!attempt) return;
+  try {
+    const res = await api("POST", `/attempts/${attempt.attempt_id}/telegram`, { token: attempt.token });
+    btn.href = res.url;
+    btn.hidden = false;
+    btn.onclick = () => { $("tg-hint").hidden = false; };
+  } catch (e) {
+    // bot qosulmayibsa duymeni umumiyyetle gostermirik
+  }
+}
 $("back-map-btn").onclick = () => show("screen-map");
 
 // ---------- 4. plan ----------
@@ -374,7 +390,7 @@ function buildPlan(d) {
       { title: `Gün 2 · ${next || root}`, tasks: next
           ? [`${next}: dərslikdəki nümunələrə bax`, `${next}: 5 məşq həll et`]
           : [`${root}: 5 çətin məşq həll et`, "Səhv etdiyin məşqləri yenidən yoxla"] },
-      { title: "Gün 3 · Yoxlama", tasks: ["Testi yenidən keç", "Xəritənin yaşıllaşdığına bax"] },
+      { title: "Gün 3 · Yoxlama", tasks: ["Testi yenidən keç", `${root} indi “Bilirsən” çıxırmı, bax`] },
     ],
   };
 }

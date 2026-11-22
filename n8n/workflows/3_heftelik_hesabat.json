@@ -1,0 +1,114 @@
+{
+  "id": "TemelHeftelikHes",
+  "name": "Təməl · Müəllimə həftəlik hesabat",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "name": "Hər bazar ertəsi 9:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "c4a6b74a-9e16-4423-b916-7187ff80349d"
+    },
+    {
+      "parameters": {},
+      "name": "Test üçün əl ilə",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ],
+      "id": "1d079cf3-a744-4b2f-a298-2501a5d16bd2"
+    },
+    {
+      "parameters": {
+        "url": "http://api:8000/internal/teacher-reports",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "name": "Hesabatları al",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        100
+      ],
+      "id": "9438979f-1a48-4da3-9958-f6bb11993f39"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Müəllimə göndər",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        520,
+        100
+      ],
+      "id": "8f89e340-a7ee-4c31-a8b5-8ab4735c7515"
+    }
+  ],
+  "connections": {
+    "Hər bazar ertəsi 9:00": {
+      "main": [
+        [
+          {
+            "node": "Hesabatları al",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test üçün əl ilə": {
+      "main": [
+        [
+          {
+            "node": "Hesabatları al",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hesabatları al": {
+      "main": [
+        [
+          {
+            "node": "Müəllimə göndər",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "pinData": {}
+}

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import JSON, BigInteger, Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -121,6 +121,17 @@ class Attempt(Base):
     diagnosis: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class TelegramLink(Base):
+    """Telegram-a qosulan sagird (test) ve ya muellim. chat_id ile n8n mesaj gonderir."""
+    __tablename__ = "telegram_links"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kind: Mapped[str] = mapped_column(String(10))  # "student" ve ya "teacher"
+    ref_id: Mapped[int] = mapped_column(Integer, index=True)  # attempt.id ve ya teacher.id
+    chat_id: Mapped[int] = mapped_column(BigInteger)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class AttemptAnswer(Base):

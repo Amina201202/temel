@@ -52,5 +52,20 @@ services:
     depends_on:
       - api
 
+  # n8n: Telegram mesajlari, gunluk xatirlatma (Wait) ve heftelik hesabat (Schedule)
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    environment:
+      GENERIC_TIMEZONE: Asia/Baku
+      TZ: Asia/Baku
+      N8N_SECURE_COOKIE: "false"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n:/files
+    ports:
+      - "5679:5678"  # 5678 Mac-de basqa n8n-e lazimdir
+
 volumes:
   pgdata:
+  n8n_data:

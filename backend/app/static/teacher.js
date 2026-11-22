@@ -107,6 +107,18 @@ async function loadOverview() {
       <td>${c.top_root ? `<span class="chip">${esc(c.top_root)}</span>` : `<span class="chip ok">Boşluq yoxdur</span>`}</td></tr>`).join("");
 }
 
+// heftelik hesabat ucun Telegram: pencereni evvel aciriq, yoxsa brauzer popup-u bloklayir
+$("tg-btn").onclick = async () => {
+  const win = window.open("", "_blank");
+  try {
+    const res = await api("POST", "/teacher/telegram");
+    if (win) win.location = res.url; else location.href = res.url;
+  } catch (e) {
+    if (win) win.close();
+    alert(e.message);
+  }
+};
+
 // Excel ucun CSV: token header-de getdiyi ucun adi link isletmirik
 $("export-btn").onclick = async () => {
   const btn = $("export-btn");

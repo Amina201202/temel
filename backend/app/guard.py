@@ -65,7 +65,9 @@ def check_input(question: str, concept: str) -> str:
                                            thinking_config=types.ThinkingConfig(thinking_budget=0)),
     )
     if resp.parsed is None or not resp.parsed.on_topic:
-        raise GuardBlock("topic", f"Mən yalnız «{concept}» və riyaziyyat haqqında kömək edə bilərəm.")
+        # "ve riyaziyyat" yazmiriq: basqa riyaziyyat movzusunu da bloklayiriq, sagird cassin
+        raise GuardBlock("topic", f"Mən sənin boşluğun — «{concept}» — üzrə kömək edirəm. "
+                                  "Başqa mövzu üçün həmin bölmədən test keç.")
     return q
 
 
