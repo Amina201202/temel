@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 from .auth import current_teacher, require_admin, store
 from .db import SessionLocal, get_db
 from .models import Attempt, Chapter, TelegramLink, Teacher
-from .teacher import teacher_attempts
+from .teacher import is_careless, teacher_attempts
 
 log = logging.getLogger("uvicorn.error")
 router = APIRouter()
@@ -220,7 +220,7 @@ def weekly_report(db, teacher):
     since = datetime.now(timezone.utc) - timedelta(days=7)
     sessions, by_id, attempts = teacher_attempts(db, teacher)
     week = [a for a in attempts if a.started_at and a.started_at >= since]
-    done = [a for a in week if a.status == "done" and a.diagnosis]
+    done = [a for a in week if a.status == "done" and a.diagnosis and not is_careless(a)]
     titles = {c.id: c.title for c in db.scalars(select(Chapter)).all()}
 
     lines = [f"📊 <b>Həftəlik hesabat</b> · {e(teacher.name)}",

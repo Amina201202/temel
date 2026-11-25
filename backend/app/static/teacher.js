@@ -252,7 +252,9 @@ async function refreshRadar(first) {
       ? (st.roots.length ? st.roots.map((x) => `<span class="chip">${esc(x)}</span>`).join("") : `<span class="chip ok">Boşluq yoxdur</span>`)
       : `<span class="s">Test davam edir · ${st.answered} sual</span>`;
     const score = st.status === "done" ? `<span class="s">${st.correct}/${st.answered} düz</span>` : "";
-    return `<button class="student" data-st="${st.attempt_id}"><span class="n">${esc(st.nickname)}</span>${score}<div>${state}</div></button>`;
+    // ML modeli testin tesadufi basildigini dusunur
+    const warn = st.careless ? `<span class="chip warn" title="Cavablar çox tez və təsadüfi verilib. Nəticə statistikaya daxil edilmir.">⚠️ Təsadüfi basılıb?</span>` : "";
+    return `<button class="student" data-st="${st.attempt_id}"><span class="n">${esc(st.nickname)}</span>${score}<div>${warn}${state}</div></button>`;
   }).join("") : `<div class="empty">Şagirdlər koda qoşulanda burada görünəcək.</div>`;
   document.querySelectorAll("[data-st]").forEach((b) => (b.onclick = () => openStudent(Number(b.dataset.st))));
 }

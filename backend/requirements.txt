@@ -13,3 +13,5 @@ langgraph-checkpoint-postgres==3.2.0
 psycopg[binary,pool]==3.3.8
 qrcode==8.2
 pgvector==0.5.1
+# klassik ML: tesadufi basma detektoru (careless.py)
+scikit-learn==1.7.2

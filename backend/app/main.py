@@ -28,6 +28,7 @@ from .auth import require_admin, store
 from .extract import ExtractionError, extract_graph, transcribe_pdf
 from .models import Attempt, AttemptAnswer, Chapter, ClassSession, Concept, ConceptEdge, QuestionTemplate
 from .questions import build_checked_templates, build_instance
+from .careless import careless_score
 from .teacher import router as teacher_router
 from .notify import router as notify_router, set_webhook
 from .tts import explanation_text, synthesize
@@ -409,8 +410,14 @@ def finish_or_ask(attempt: Attempt, db: Session, feedback=None) -> AttemptStep:
     if values.get("done"):
         if attempt.status != "done":
             attempt.status = "done"
-            attempt.diagnosis = values.get("diagnosis")
             attempt.finished_at = datetime.now(timezone.utc)
+            d = dict(values.get("diagnosis") or {})
+            try:
+                # ML: test tesadufi basilibmi? (careless.py)
+                d["careless"] = careless_score(db, attempt)
+            except Exception as e:  # noqa: BLE001
+                logger.warning("careless model xetasi: %s", e)
+            attempt.diagnosis = d
             db.commit()
         return AttemptStep(attempt_id=attempt.id, token=attempt.token, done=True,
                            feedback=feedback, diagnosis=attempt.diagnosis)

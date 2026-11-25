@@ -30,6 +30,10 @@ class SessionIn(BaseModel):
     class_name: str = Field(min_length=1, max_length=40)
 
 
+def is_careless(a):
+    return bool(a.diagnosis) and (a.diagnosis.get("careless") or 0) >= 0.5
+
+
 # ---------- admin: muellim hesabi yaratmaq ----------
 
 @router.post("/admin/teachers", dependencies=[Depends(require_admin)])
@@ -154,7 +158,10 @@ def close_session(session_id: int, teacher: Teacher = Depends(current_teacher), 
 def radar(session_id: int, teacher: Teacher = Depends(current_teacher), db: Session = Depends(get_db)):
     cs = own_session(db, session_id, teacher)
     attempts = db.scalars(select(Attempt).where(Attempt.session_id == cs.id).order_by(Attempt.started_at)).all()
-    done = [a for a in attempts if a.status == "done" and a.diagnosis]
+    done_all = [a for a in attempts if a.status == "done" and a.diagnosis]
+    # ML tesadufi basilmis sayirsa, statistikaya qatmiriq (sehv "kok sebeb" yaratmasin)
+    done = [a for a in done_all if not is_careless(a)]
+    skipped = len(done_all) - len(done)
     # bolmenin movzulari + diaqnozda gorunen evvelki sinif movzulari
     concepts = list(db.scalars(select(Concept.name).where(Concept.chapter_id == cs.chapter_id).order_by(Concept.id)).all())
     for a in done:
@@ -197,6 +204,8 @@ def radar(session_id: int, teacher: Teacher = Depends(current_teacher), db: Sess
                   f"Növbəti dərsi 10 dəqiqəlik «{top}» təkrarı ilə başlamaq tövsiyə olunur.")
     elif done:
         advice = "Bitirən şagirdlərdə ortaq ciddi boşluq tapılmadı."
+    if skipped:
+        advice += f" ({skipped} test təsadüfi basıldığı üçün statistikaya daxil edilmədi.)"
     else:
         advice = "Şagirdlər testi bitirdikcə tövsiyə burada görünəcək."
 
@@ -207,6 +216,7 @@ def radar(session_id: int, teacher: Teacher = Depends(current_teacher), db: Sess
             "answered": answered.get(a.id, 0),
             "correct": a.diagnosis["correct"] if a.diagnosis else None,
             "roots": a.diagnosis["roots"] if a.diagnosis else [],
+            "careless": is_careless(a),
         } for a in attempts],
         "concepts": concept_stats,
         "top_roots": [{"concept": c, "count": n} for c, n in roots],
@@ -342,6 +352,7 @@ def admin_attempts(db: Session = Depends(get_db)):
             "status": "bitirdi" if a.status == "done" else "yarımçıq",
             "answered": d.get("answered"), "correct": d.get("correct"),
             "roots": d.get("roots", []),
+            "careless": d.get("careless"),
             "minutes": round((a.finished_at - a.started_at).total_seconds() / 60, 1) if a.finished_at else None,
             "started_at": a.started_at.strftime("%Y-%m-%d %H:%M"),
         })

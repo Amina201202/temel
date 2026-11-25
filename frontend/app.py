@@ -262,8 +262,9 @@ if page == "📊 Nəticələr":
     c1.metric("Cəmi test", len(rows))
     c2.metric("Bitirib", len(done))
     c3.metric("Kodsuz", sum(1 for r in rows if r["class_name"] == "— kodsuz —"))
-    fast = sum(1 for r in done if r["minutes"] is not None and r["minutes"] < 1)
-    c4.metric("1 dəqiqədən tez", fast, help="Çox tez bitənlər çox güman təsadüfi basılıb")
+    careless = sum(1 for r in done if (r.get("careless") or 0) >= 0.5)
+    c4.metric("⚠️ Təsadüfi basılıb (ML)", careless,
+              help="Random Forest modeli cavab vaxtlarına və düzgünlüyə baxıb testin təsadüfi basıldığını təxmin edir")
 
     st.markdown("#### Bütün testlər")
     table = [{
@@ -271,7 +272,9 @@ if page == "📊 Nəticələr":
         "Mövzu": f"{r['chapter']} ({grade_label(r['grade'])})" if r["grade"] else r["chapter"],
         "Status": r["status"],
         "Düz": f"{r['correct']}/{r['answered']}" if r["answered"] else "",
-        "Kök səbəb": ", ".join(r["roots"]), "Dəqiqə": r["minutes"], "Başladı": r["started_at"],
+        "Kök səbəb": ", ".join(r["roots"]), "Dəqiqə": r["minutes"],
+        "Təsadüfi ehtimalı": f"{round(100 * r['careless'])}%" if r.get("careless") is not None else "",
+        "Başladı": r["started_at"],
     } for r in rows]
     st.dataframe(table, use_container_width=True, hide_index=True)
 
