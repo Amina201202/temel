@@ -7,13 +7,9 @@ API_URL = os.getenv("API_URL", "http://localhost:8000")
 ADMIN_KEY = os.getenv("ADMIN_PASSWORD", "")
 PUBLIC_URL = os.getenv("PUBLIC_URL", "http://localhost:8010").rstrip("/")
 
-st.set_page_config(page_title="Təməl · Admin", page_icon="🎯", layout="wide")
+st.set_page_config(page_title="Radix AI · Admin", page_icon="√", layout="wide")
 
-LOGO = """<svg viewBox="0 0 40 40" width="{s}" height="{s}"><rect width="40" height="40" rx="11" fill="#3D4BE0"/>
-<circle cx="20" cy="20" r="12" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width="2"/>
-<circle cx="20" cy="20" r="6.5" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="2"/>
-<path d="M20 20L28.5 11.5" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>
-<circle cx="20" cy="20" r="2.4" fill="#fff"/><circle cx="25" cy="26" r="2" fill="#fff"/></svg>"""
+LOGO = """<svg viewBox="0 0 40 40" width="{s}" height="{s}"><rect width="40" height="40" rx="11" fill="#3D4BE0"/><path d="M8.5 21.5 L12.5 19.5 L18 30 L24.5 10.5 L32 10.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="10.5" r="2.6" fill="#FFC857"/></svg>"""
 
 # temel-in reng ve sriftleri: sagird/muellim tetbiqi ile eyni gorunsun
 # tema: istifadeci menyudan (⋮ → Settings) ag ve ya qaranliq secir
@@ -112,7 +108,7 @@ def page_header(title, sub=""):
 if not st.session_state.get("admin_ok"):
     _, mid, _ = st.columns([1, 1.2, 1])
     with mid:
-        st.markdown(f"<div class='login-card'>{LOGO.format(s=64)}<h1>Təməl · Admin</h1>"
+        st.markdown(f"<div class='login-card'>{LOGO.format(s=64)}<h1>Radix AI · Admin</h1>"
                     "<p>Dərsliklər, suallar, nəticələr və müəllimlər</p></div>", unsafe_allow_html=True)
         with st.form("login"):
             pwd = st.text_input("Admin şifrəsi", type="password")
@@ -175,7 +171,7 @@ def grade_label(g):
 
 # ---------- yan menyu ----------
 with st.sidebar:
-    st.markdown(f"<div class='brand'>{LOGO.format(s=40)}<div><b>Təməl</b><span>Admin paneli</span></div></div>",
+    st.markdown(f"<div class='brand'>{LOGO.format(s=40)}<div><b>Radix AI</b><span>Admin paneli</span></div></div>",
                 unsafe_allow_html=True)
     st.markdown("<div class='side-label'>Menyu</div>", unsafe_allow_html=True)
     page = st.radio("Menyu", ["📚 Dərsliklər və suallar", "📊 Nəticələr", "👩‍🏫 Müəllimlər"],

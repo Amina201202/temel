@@ -125,7 +125,7 @@ Sistem **hibriddir**: Ollama varsa mövzu yoxlaması lokal işləyir, yoxdursa a
 ### Real istifadəçilər
 9-cu sinif şagirdləri sınadı. Bir şagirdin səhvləri 9-cu sinif mövzusunda idi, Təməl isə səbəbi **6-cı sinfin "Əməllər ardıcıllığı"** mövzusunda tapdı.
 
-> *"Birhədliləri açdım, sən demə heç nə bilmirmişəm, axırda izah da eləyir. Bunu təqdim eləsən də, eləməsən də mən işlədəcəm şəxsən."* — 9-cu sinif şagirdi
+> *"Birhədliləri açdım, sən demə heç nə bilmirmişəm, axırda izah da eləyir. Bunu təqdim eləsən də, eləməsən də mən işlədəcəm şəxsən."* — Mehri
 
 Rəylərdən sonra edilən düzəlişlər: riyazi yazılış sadələşdirildi (`^`, `*` əvəzinə `x²`), "kağız-qələm hazırla" ipucu əlavə olundu, təsadüfi basma detektoru yarandı.
 

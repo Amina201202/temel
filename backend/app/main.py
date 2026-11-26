@@ -75,7 +75,7 @@ async def lifespan(app: FastAPI):
         pool.close()
 
 
-app = FastAPI(title="Təməl API", lifespan=lifespan)
+app = FastAPI(title="Radix AI API", lifespan=lifespan)
 
 
 # Gemini xetasi olanda 500 yox, aydin mesaj qaytaririq

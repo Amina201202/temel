@@ -139,7 +139,7 @@ def eval_roots():
                    if a < b and a not in ancestors(b, prereqs) and b not in ancestors(a, prereqs)]
     profiles += [list(p) for p in rng.sample(independent, min(3, len(independent)))]  # 2 bosluq
 
-    methods = {"Təməl (adaptiv)": [], "Adi test (sadə sayma)": [], "Adi test + qraf qaydası": []}
+    methods = {"Radix (adaptiv)": [], "Adi test (sadə sayma)": [], "Adi test + qraf qaydası": []}
     found = {k: [] for k in methods}  # heqiqi kok proqnozun icindedirmi
     q_counts = {k: [] for k in methods}
     times = []
@@ -154,7 +154,7 @@ def eval_roots():
             times.append(time.perf_counter() - t0)
             wrong, n_fixed = run_fixed_test(state, SimStudent(gaps, prereqs, random.Random(seed)), random.Random(seed))
             results = {
-                "Təməl (adaptiv)": (pred, n),
+                "Radix (adaptiv)": (pred, n),
                 "Adi test (sadə sayma)": (baseline_naive(wrong, random.Random(seed)), n_fixed),
                 "Adi test + qraf qaydası": (baseline_graph(wrong, prereqs), n_fixed),
             }
@@ -197,7 +197,7 @@ def eval_roots():
     md += [f"| {k} | {v['accuracy']:.0%} | {v['root_found']:.0%} | {v['avg_questions']} |" for k, v in summary.items()]
     md += ["", "Tam düzgün: tapılan köklər həqiqi köklərlə eynidir (artıq kök yoxdur). "
                "Həqiqi kök tapıldı: həqiqi kök nəticədə var (yanında artıq mövzu ola bilər)."]
-    md += ["", "Təməl profil tipinə görə: " + ", ".join(f"{k}: {v}" for k, v in by_type.items()), "",
+    md += ["", "Radix profil tipinə görə: " + ", ".join(f"{k}: {v}" for k, v in by_type.items()), "",
            f"Bir testin hesablama vaxtı (AI-sız): {report['temel_ms_per_test']} ms"]
     (OUT / f"roots_{tag}.md").write_text("\n".join(md), encoding="utf-8")
     print("\n".join(md))

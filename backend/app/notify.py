@@ -92,7 +92,7 @@ def plan_messages(attempt):
         title, tasks = days[i]
         return f"📅 <b>Gün {i + 1} · {e(title)}</b>\n" + "\n".join(f"• {e(t)}" for t in tasks)
 
-    day1 = (f"👋 Salam, <b>{e(attempt.nickname)}</b>!\nMən Təməl botuyam, 3 günlük planını xatırladacağam.\n\n"
+    day1 = (f"👋 Salam, <b>{e(attempt.nickname)}</b>!\nMən Radix AI botuyam, 3 günlük planını xatırladacağam.\n\n"
             f"🎯 Hədəf: {e(goal)}\n\n{day_text(0)}\n\nSabah Gün 2-ni göndərəcəyəm 💪")
     day2 = (f"{day_text(1)}\n\nDünənki tapşırıqları etdin? Bu gün davam edək!\n"
             "💬 Başa düşmədiyin yer varsa, bura yaz — cavab verəcəyəm.")
@@ -149,7 +149,7 @@ async def telegram_webhook(request: Request, background: BackgroundTasks,
         if link and link.kind == "student" and text and not text.startswith("/"):
             background.add_task(answer_in_chat, chat_id, link.ref_id, text)
             return {"ok": True}
-        hello = ("Salam! Mən <b>Təməl</b> botuyam 👋\nTesti bitirəndən sonra 3 günlük plan ekranında "
+        hello = ("Salam! Mən <b>Radix AI</b> botuyam 👋\nTesti bitirəndən sonra 3 günlük plan ekranında "
                  "<b>“Telegram-da xatırlat”</b> düyməsini bas — planını bura göndərəcəyəm.")
         if link and link.kind == "teacher":
             hello = "Salam! 👋 Həftəlik hesabat hər bazar ertəsi saat 9:00-da bura gələcək."
