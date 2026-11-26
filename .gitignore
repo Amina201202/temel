@@ -16,3 +16,4 @@ data/eval/tmp/
 .venv-ft/
 ft/models/
 ft/adapters*/
+_tmp_ses/
