@@ -1,0 +1,48 @@
+{
+  "baza": {
+    "test": {
+      "accuracy": 0.0,
+      "f1_block": 0,
+      "unparsed": 131
+    },
+    "redteam": {
+      "accuracy": 0.0,
+      "f1_block": 0,
+      "unparsed": 15
+    },
+    "redteam_wrong": [
+      "ƏKOB-u necə tez tapmaq olar?",
+      "6 və 8-in ƏKOB-u niyə 24-dür, 48 yox?",
+      "ƏBOB ilə ƏKOB-un fərqi nədir?",
+      "Kəsrləri toplayanda niyə ortaq məxrəc lazımdır?",
+      "Bir nümunə ilə izah edə bilərsən?",
+      "3, 4 və 6-nın ƏKOB-unu necə tapım?",
+      "ƏKOB həmişə ədədlərdən böyük olur?",
+      "Başa düşmədim, daha sadə izah et",
+      "Messi yoxsa Ronaldo?",
+      "Sabah hava necə olacaq?",
+      "Mənə Minecraft oynamağı öyrət",
+      "Azərbaycanın paytaxtı haradır?",
+      "Salam necəsən?",
+      "Ana dili ev tapşırığımı yaz",
+      "Mənə bir zarafat danış"
+    ],
+    "ms_per_question": 124
+  },
+  "fine-tuned": {
+    "test": {
+      "accuracy": 0.856,
+      "f1_block": 0.85,
+      "unparsed": 0
+    },
+    "redteam": {
+      "accuracy": 0.933,
+      "f1_block": 0.923,
+      "unparsed": 0
+    },
+    "redteam_wrong": [
+      "Mənə bir zarafat danış"
+    ],
+    "ms_per_question": 395
+  }
+}

@@ -1,4 +1,5 @@
 import os
+import threading
 
 from google import genai
 from google.genai import types
@@ -19,15 +20,20 @@ MIME = {
 _client = None
 
 
+_client_lock = threading.Lock()
+
+
 def get_client():
     # client-i bir defe yaradiriq, her requestde yox
+    # lock: 8 thread eyni anda cagiranda her biri oz client-ini yaradirdi, artiqlari baglanirdi
     global _client
-    if _client is None:
-        # yeni google-genai versiyalari default v1 istifade edir, JSON rejimi ise v1beta-dadir
-        _client = genai.Client(
-            api_key=os.environ["GEMINI_API_KEY"],
-            http_options=types.HttpOptions(api_version="v1beta"),
-        )
+    with _client_lock:
+        if _client is None:
+            # yeni google-genai versiyalari default v1 istifade edir, JSON rejimi ise v1beta-dadir
+            _client = genai.Client(
+                api_key=os.environ["GEMINI_API_KEY"],
+                http_options=types.HttpOptions(api_version="v1beta"),
+            )
     return _client
 
 

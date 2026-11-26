@@ -1,0 +1,17 @@
+# Ollama: fine-tuned Llama 3.2 1B (QLoRA) - Temel movzu yoxlayicisi
+# MLX-in GGUF exportu tokenizer-i sehv yazir, ona gore Ollama safetensors-dan ozu cevirir
+FROM ./models/temel-guard-hf
+
+TEMPLATE """<|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+{{ .System }}<|eot_id|>{{- range .Messages }}{{- if ne .Role "system" }}<|start_header_id|>{{ .Role }}<|end_header_id|>
+
+{{ .Content }}<|eot_id|>{{- end }}{{- end }}<|start_header_id|>assistant<|end_header_id|>
+
+"""
+PARAMETER temperature 0
+PARAMETER num_predict 3
+PARAMETER stop "<|eot_id|>"

@@ -4,7 +4,12 @@ Giris qorumalari (input rails):  uzunluq -> sexsi melumat -> prompt injection ->
 Cixis qorumalari (output rails): menbe yoxlamasi -> sexsi melumat -> uzunluq
 NeMo Guardrails-in ideyasi ile eyni, amma Gemini ile isleyen oz kodumuzdur.
 """
+import json
+import logging
+import os
 import re
+import time
+import urllib.request
 
 from google.genai import types
 from pydantic import BaseModel, Field
@@ -21,6 +26,41 @@ INJECTION = [
     r"игнорируй", r"забудь (все )?инструкции", r"системн(ый|ая) (промпт|инструкци)",
 ]
 INJECTION_RE = re.compile("|".join(INJECTION), re.IGNORECASE)
+
+
+log = logging.getLogger("uvicorn.error")
+
+# fine-tuned lokal model (Ollama, Mac-de). Yoxdursa ve ya cavab vermirse - Gemini
+LOCAL_GUARD_URL = os.getenv("LOCAL_GUARD_URL", "")  # mes. http://host.docker.internal:11434/v1/chat/completions
+LOCAL_GUARD_MODEL = os.getenv("LOCAL_GUARD_MODEL", "temel-guard")
+# fine-tuning bu sistem promptu ile edilib (ft_data.py), deyismek olmaz
+FT_SYSTEM = ("Sən uşaq təhsil platformasının mövzu yoxlayıcısısan. Şagirdin sualı verilən mövzu və ya ona yaxın "
+             "məktəb riyaziyyatı haqqındadırsa \"on\", deyilsə (salam, şəxsi söhbət, başqa fənn, oyun, zarafat, "
+             "hazır ev tapşırığı həlli) \"off\" yaz. Yalnız bir söz yaz.")
+
+
+def local_topic(concept, question):
+    """True/False - lokal model qerari; None - model elcatan deyil (onda Gemini)."""
+    if not LOCAL_GUARD_URL:
+        return None
+    body = {"model": LOCAL_GUARD_MODEL, "temperature": 0, "max_tokens": 3, "messages": [
+        {"role": "system", "content": FT_SYSTEM},
+        {"role": "user", "content": f"Mövzu: {concept}\nSual: {question}"}]}
+    req = urllib.request.Request(LOCAL_GUARD_URL, data=json.dumps(body).encode(),
+                                 headers={"Content-Type": "application/json"}, method="POST")
+    try:
+        t0 = time.time()
+        out = json.loads(urllib.request.urlopen(req, timeout=5).read())
+        text = out["choices"][0]["message"]["content"].strip().lower()
+        log.info("GUARD local: %s (%.0f ms)", text, 1000 * (time.time() - t0))
+    except Exception as e:  # noqa: BLE001
+        log.warning("GUARD local isleMEdi, Gemini-ye kecirik: %s", e)
+        return None
+    if text.startswith("off"):
+        return False
+    if text.startswith("on"):
+        return True
+    return None
 
 
 class GuardBlock(Exception):
@@ -56,6 +96,12 @@ def check_input(question: str, concept: str) -> str:
         raise GuardBlock("pii", "Burada telefon və ya e-poçt kimi şəxsi məlumat yazma.")
     if INJECTION_RE.search(q):
         raise GuardBlock("injection", "Bu sualı cavablaya bilmərəm. Mövzu haqqında soruş.")
+    on_topic = local_topic(concept, q)
+    if on_topic is not None:
+        if not on_topic:
+            raise GuardBlock("topic", f"Mən sənin boşluğun — «{concept}» — üzrə kömək edirəm. "
+                                      "Başqa mövzu üçün həmin bölmədən test keç.")
+        return q
     resp = get_client().models.generate_content(
         model=MODEL,
         contents=TOPIC_PROMPT.format(concept=concept, question=q.replace(">>>", "")),

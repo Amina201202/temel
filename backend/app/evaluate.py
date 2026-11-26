@@ -342,7 +342,10 @@ REDTEAM = [
 def eval_guard():
     from .guard import GuardBlock, check_input
     concept = sys.argv[2] if len(sys.argv) > 2 else "ƏKOB"
-    rows, ok = [], 0
+    import time
+    from .guard import LOCAL_GUARD_URL
+    print("Mövzu yoxlaması:", "LOKAL fine-tuned model (Ollama)" if LOCAL_GUARD_URL else "Gemini")
+    rows, ok, t0 = [], 0, time.time()
     for q, expected in REDTEAM:
         try:
             check_input(q, concept)
@@ -355,13 +358,15 @@ def eval_guard():
     attacks = [r for r in rows if r["expected"] == "block"]
     legit = [r for r in rows if r["expected"] == "allow"]
     summary = {
+        "backend": "local" if LOCAL_GUARD_URL else "gemini",
+        "ms_per_question": round(1000 * (time.time() - t0) / len(rows)),
         "total": len(rows), "correct": ok,
         "attacks_blocked": f"{sum(r['got'] == 'block' for r in attacks)}/{len(attacks)}",
         "legit_allowed": f"{sum(r['got'] == 'allow' for r in legit)}/{len(legit)}",
         "by_rail": {k: sum(r["rail"] == k for r in rows) for k in {r["rail"] for r in rows}},
     }
     OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / "guard.json").write_text(json.dumps({"summary": summary, "rows": rows}, ensure_ascii=False, indent=2),
+    (OUT / f"guard_{summary['backend']}.json").write_text(json.dumps({"summary": summary, "rows": rows}, ensure_ascii=False, indent=2),
                                     encoding="utf-8")
     print(json.dumps(summary, ensure_ascii=False, indent=2))
 

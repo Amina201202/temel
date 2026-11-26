@@ -13,3 +13,6 @@ data/*.zip
 data/*.pdf
 data/chapters/
 data/eval/tmp/
+.venv-ft/
+ft/models/
+ft/adapters*/
