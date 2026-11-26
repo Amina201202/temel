@@ -174,7 +174,8 @@ def train():
             p = float(rf.predict_proba([[f[k] for k in FEATURES]])[0][1])
             # kohne testlere de ehtimali yaziriq ki, radarda gorunsun
             a.diagnosis = {**a.diagnosis, "careless": round(p, 2)}
-            real.append({"id": a.id, "nickname": a.nickname, "n": f["n"], "total_sec": round(f["total_sec"]),
+            # hesabata real lebeqleri yazmiriq (repo public-dir), yalniz terminalda gorunur
+            real.append({"id": a.id, "nickname": f"sagird #{a.id}", "_shown": a.nickname, "n": f["n"], "total_sec": round(f["total_sec"]),
                          "median_sec": round(f["median_sec"], 1), "accuracy": round(f["accuracy"], 2),
                          "prob": round(p, 2)})
         db.commit()
@@ -185,7 +186,7 @@ def train():
     print(f"{'id':>4}  {'ləqəb':<20}{'sual':>5}{'saniyə':>8}{'median':>8}{'düz%':>6}{'ehtimal':>9}")
     for r in real:
         flag = "  ⚠️ təsadüfi?" if r["prob"] >= 0.5 else ""
-        print(f"{r['id']:>4}  {r['nickname'][:19]:<20}{r['n']:>5}{r['total_sec']:>8}{r['median_sec']:>8}"
+        print(f"{r['id']:>4}  {r.pop('_shown')[:19]:<20}{r['n']:>5}{r['total_sec']:>8}{r['median_sec']:>8}"
               f"{round(100 * r['accuracy']):>6}{r['prob']:>9}{flag}")
 
     if REPORT_PATH.parent.exists():
