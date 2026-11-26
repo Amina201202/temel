@@ -31,6 +31,9 @@ from .questions import build_checked_templates, build_instance
 from .careless import careless_score
 from .teacher import router as teacher_router
 from .notify import router as notify_router, set_webhook
+from .models import Student
+from .students import router as students_router
+from .practice import router as practice_router
 from .tts import explanation_text, synthesize
 from .schemas import (AnswerIn, AttemptIn, AttemptStep, ChapterOut, ConceptOut, EdgeOut, Feedback, GraphOut,
                       OptionOut, PublicQuestion, QuestionOut, QuestionStats, StatusIn)
@@ -67,6 +70,11 @@ async def lifespan(app: FastAPI):
             conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
     # cedveller yoxdursa yaradir (sonra alembic-e kececeyik)
     Base.metadata.create_all(engine)
+    if engine.dialect.name == "postgresql":
+        # create_all kohne cedvele yeni sutun elave etmir, ona gore ozumuz
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE attempts ADD COLUMN IF NOT EXISTS student_id INTEGER "
+                              "REFERENCES students(id) ON DELETE SET NULL"))
     saver, pool = make_checkpointer()
     GRAPH = build_graph(saver)
     set_webhook()
@@ -98,6 +106,8 @@ def gemini_error(request: Request, exc: genai_errors.APIError):
     return JSONResponse(status_code=503, content={"detail": msg})
 app.include_router(teacher_router)
 app.include_router(notify_router)
+app.include_router(students_router)
+app.include_router(practice_router)
 
 
 @app.middleware("http")
@@ -451,9 +461,18 @@ def start_attempt(body: AttemptIn, db: Session = Depends(get_db)):
     if chapter_id is None:
         raise HTTPException(400, "Bölmə və ya sessiya kodu lazımdır")
 
+    # sagird daxil olubsa - test onun hesabina, lebeq de hesabdan
+    student = None
+    if body.student_token:
+        sid = store().get(f"student_token:{body.student_token}")
+        student = db.get(Student, int(sid)) if sid else None
+        if student is None:
+            raise HTTPException(401, "Giriş vaxtı bitib, yenidən daxil ol")
+        nickname = student.nickname
+
     state = initial_state(db, chapter_id)
     attempt = Attempt(token=secrets.token_urlsafe(24), chapter_id=chapter_id,
-                      session_id=session_id, nickname=nickname)
+                      session_id=session_id, nickname=nickname, student_id=student.id if student else None)
     db.add(attempt)
     db.commit()
 

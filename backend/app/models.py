@@ -107,6 +107,18 @@ class ClassSession(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class Student(Base):
+    """Sagirdin yungul hesabi: lebeq + 4 reqemli PIN. Real ad, e-poct yoxdur."""
+    __tablename__ = "students"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    nickname: Mapped[str] = mapped_column(String(30))
+    # "Ulduz 5" ve "ulduz  5" eyni hesab olsun
+    nickname_key: Mapped[str] = mapped_column(String(30), unique=True)
+    pin_hash: Mapped[str] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class Attempt(Base):
     """Bir sagirdin bir test kecmesi. LangGraph thread_id = attempt-<id>."""
     __tablename__ = "attempts"
@@ -116,6 +128,7 @@ class Attempt(Base):
     token: Mapped[str] = mapped_column(String(64), unique=True)
     chapter_id: Mapped[int] = mapped_column(ForeignKey("chapters.id", ondelete="CASCADE"))
     session_id: Mapped[int | None] = mapped_column(ForeignKey("class_sessions.id", ondelete="SET NULL"), nullable=True)
+    student_id: Mapped[int | None] = mapped_column(ForeignKey("students.id", ondelete="SET NULL"), nullable=True)
     nickname: Mapped[str] = mapped_column(String(30))
     status: Mapped[str] = mapped_column(String(20), default="in_progress")
     diagnosis: Mapped[dict | None] = mapped_column(JSON, nullable=True)

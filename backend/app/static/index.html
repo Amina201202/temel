@@ -32,16 +32,29 @@
       </div>
     </header>
 
+    <!-- hesab zolagi: girissiz / girisli -->
+    <button id="acct-guest" class="acct" type="button">
+      <span class="acct-ico">👤</span>
+      <span class="acct-txt"><b>Daxil ol</b><small>Nəticələrini saxla və irəliləyişini izlə</small></span>
+      <span class="acct-go">→</span>
+    </button>
+    <button id="acct-user" class="acct user" type="button" hidden>
+      <span id="acct-avatar" class="avatar">A</span>
+      <span class="acct-txt"><b id="acct-hello">Salam!</b><small id="acct-sub">Mənim səhifəm</small></span>
+      <span class="acct-go">→</span>
+    </button>
+
     <div class="hero">
       <h1>Nəyi bilmədiyini 10 dəqiqədə tap.</h1>
       <p class="muted">Səhv etsən, sistem səbəbi əvvəlki mövzularda axtarır.</p>
     </div>
 
     <form id="start-form" class="card stack" novalidate>
-      <label class="field">
+      <label class="field" id="nickname-field">
         <span>Ləqəb</span>
         <input id="nickname" type="text" maxlength="20" autocomplete="off" placeholder="məs. ulduz_5" required>
       </label>
+
 
       <label class="field">
         <span>Sinif kodu <em class="muted">(müəllim versə)</em></span>
@@ -92,6 +105,9 @@
 
   <!-- 3. Bilik xeritesi -->
   <section id="screen-map" class="screen" hidden>
+    <div class="topbar" id="map-topbar" hidden>
+      <button class="link" id="back-history-btn" type="button">← Mənim səhifəm</button>
+    </div>
     <div class="hero small">
       <h1>Sənin bilik xəritən</h1>
       <p id="map-summary" class="muted"></p>
@@ -134,6 +150,72 @@
     <p id="tg-hint" class="muted small-note" hidden>Telegram-da <b>Start</b> bas — planın hər gün ora gələcək.</p>
     <div class="spacer"></div>
     <button id="restart-btn" class="btn secondary" type="button">Yeni test başla</button>
+  </section>
+
+  <!-- 4b. Boslugu bagla: mesq -->
+  <section id="screen-practice" class="screen" hidden>
+    <div class="topbar">
+      <button class="link" id="pr-quit" type="button">← Xəritə</button>
+      <span id="pr-counter" class="counter"></span>
+    </div>
+    <div class="progress"><div id="pr-progress"></div></div>
+    <div id="pr-body" class="stack">
+      <div class="tags"><span id="pr-concept" class="tag accent"></span><span class="tag">💪 Məşq</span></div>
+      <div class="card question"><div id="pr-text" class="q-text"></div></div>
+      <div id="pr-options" class="options"></div>
+      <div id="pr-feedback" class="feedback" hidden></div>
+    </div>
+    <div id="pr-result" class="pr-result" hidden></div>
+    <div class="spacer"></div>
+    <button id="pr-next" class="btn primary" type="button" hidden>Davam et →</button>
+  </section>
+
+  <!-- 5. Sagird girisi -->
+  <section id="screen-login" class="screen" hidden>
+    <div class="topbar">
+      <button class="link" id="login-back" type="button">← Geri</button>
+    </div>
+    <div class="login-head">
+      <svg class="logo big" viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="11" fill="#3D4BE0"/><path d="M8.5 21.5 L12.5 19.5 L18 30 L24.5 10.5 L32 10.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="10.5" r="2.6" fill="#FFC857"/></svg>
+      <h1>Şagird girişi</h1>
+      <p class="muted">İlk dəfədirsə, yazdığın ləqəb və PIN sənin hesabın olacaq.</p>
+    </div>
+    <form id="login-form" class="card stack" novalidate>
+      <label class="field">
+        <span>Ləqəb</span>
+        <input id="l-nickname" type="text" maxlength="20" autocomplete="username" placeholder="məs. ulduz_5">
+      </label>
+      <label class="field">
+        <span>PIN <em class="muted">(4 rəqəm)</em></span>
+        <input id="l-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="current-password" placeholder="••••">
+      </label>
+      <p id="login-error" class="error" hidden></p>
+      <button id="login-submit" class="btn primary" type="submit">Daxil ol</button>
+    </form>
+    <p class="privacy">🔒 Real adını yazma. PIN-i heç kimə demə: müəllim də onu görə bilmir.</p>
+  </section>
+
+  <!-- 6. Menim sehifem -->
+  <section id="screen-me" class="screen" hidden>
+    <div class="topbar">
+      <button class="link" id="me-back" type="button">← Ana səhifə</button>
+      <button class="link" id="logout-btn" type="button">Çıxış</button>
+    </div>
+    <div class="me-head">
+      <span id="me-avatar" class="avatar big">A</span>
+      <div>
+        <h1 id="me-name">amina</h1>
+        <p class="muted">Mənim səhifəm</p>
+      </div>
+    </div>
+    <div class="me-stats">
+      <div class="mstat"><b id="ms-tests">0</b><span>test</span></div>
+      <div class="mstat good"><b id="ms-closed">0</b><span>boşluq bağlandı</span></div>
+      <div class="mstat wide"><b id="ms-last">—</b><span>son kök səbəb</span></div>
+    </div>
+    <button id="me-new" class="btn primary" type="button">+ Yeni test</button>
+    <h2 class="me-title">Testlərim</h2>
+    <div id="me-list" class="stack"></div>
   </section>
 
 </main>

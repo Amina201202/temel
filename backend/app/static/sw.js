@@ -1,5 +1,5 @@
 // Temel service worker: tetbiq kimi qurasdirmaq ve internet olmayanda esas ekrani gostermek ucun
-const CACHE = "radix-v1";
+const CACHE = "radix-v6";
 const SHELL = ["./", "index.html", "style.css", "app.js", "theme.js", "manifest.json",
   "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
 

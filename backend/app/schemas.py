@@ -73,6 +73,7 @@ class AttemptIn(BaseModel):
     nickname: str
     chapter_id: int | None = None
     join_code: str | None = None
+    student_token: str | None = None  # sagird daxil olubsa - test onun hesabina yazilir
 
 
 class AnswerIn(BaseModel):
