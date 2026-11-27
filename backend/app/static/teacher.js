@@ -253,7 +253,8 @@ async function refreshRadar(first) {
       : `<span class="s">Test davam edir · ${st.answered} sual</span>`;
     const score = st.status === "done" ? `<span class="s">${st.correct}/${st.answered} düz</span>` : "";
     // ML modeli testin tesadufi basildigini dusunur
-    const warn = st.careless ? `<span class="chip warn" title="Cavablar çox tez və təsadüfi verilib. Nəticə statistikaya daxil edilmir.">⚠️ Təsadüfi basılıb?</span>` : "";
+    const warn = (st.careless ? `<span class="chip warn" title="Cavablar çox tez və təsadüfi verilib. Nəticə statistikaya daxil edilmir.">⚠️ Təsadüfi basılıb?</span>` : "")
+      + (st.left_tab >= 2 ? `<span class="chip warn" title="Sual açıq olanda başqa pəncərəyə, taba və ya Lens/AI panelinə keçib">👀 ${st.left_tab} dəfə testdən çıxıb</span>` : "");
     return `<button class="student" data-st="${st.attempt_id}"><span class="n">${esc(st.nickname)}</span>${score}<div>${warn}${state}</div></button>`;
   }).join("") : `<div class="empty">Şagirdlər koda qoşulanda burada görünəcək.</div>`;
   document.querySelectorAll("[data-st]").forEach((b) => (b.onclick = () => openStudent(Number(b.dataset.st))));

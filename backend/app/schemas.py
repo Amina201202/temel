@@ -79,6 +79,7 @@ class AttemptIn(BaseModel):
 class AnswerIn(BaseModel):
     token: str
     value: str
+    left: int = 0  # sual aciq olanda nece defe basqa pencereye/taba kecib (Lens, ChatGPT...)
 
 
 class PublicQuestion(BaseModel):

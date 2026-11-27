@@ -131,7 +131,9 @@ $("start-form").onsubmit = async (ev) => {
 
 function renderStep(step) {
   if (step.done) {
-    $("map-topbar").hidden = !fromHistory;
+    // xeriteden hemise geri qayitmaq olsun: daxil olubsa "menim sehifem"-e, yoxsa ana sehifeye
+    $("map-topbar").hidden = false;
+    $("back-history-btn").textContent = me ? "← Mənim səhifəm" : "← Ana səhifə";
     lastDiagnosis = step.diagnosis;
     renderMap(step.diagnosis);
     show("screen-map");
@@ -170,7 +172,8 @@ async function answer(value, btn) {
   all.forEach((b) => (b.disabled = true));
   btn.classList.add("picked");
   try {
-    const step = await api("POST", `/attempts/${attempt.attempt_id}/answer`, { token: attempt.token, value });
+    const step = await api("POST", `/attempts/${attempt.attempt_id}/answer`, { token: attempt.token, value, left: leftCount });
+    leftCount = 0;
     showFeedback(step.feedback, value);
     pendingStep = step;
   } catch (e) {
@@ -440,6 +443,20 @@ function renderPlan(d) {
   $("plan-done").textContent = `${count} / ${total} tamamlandı`;
 }
 
+// ---------- fırıldaga qarsi: pencereden cixmani sayiriq ----------
+// Lens / "Ask Gemini" / basqa tab - sehife fokusu itirir. Tam qadagan etmek olmur, amma muellim gorur.
+let leftCount = 0;
+let lastLeft = 0;
+window.addEventListener("blur", () => {
+  if (onQuestionScreen() && Date.now() - lastLeft > 1500) { leftCount += 1; lastLeft = Date.now(); }
+});
+// sual aciq olanda butun sehifede sag klik menyusu (Lens, "Ask Gemini", Copy) olmasin
+function onQuestionScreen() {
+  return !$("screen-test").hidden || !$("screen-practice").hidden;
+}
+document.addEventListener("contextmenu", (ev) => { if (onQuestionScreen()) ev.preventDefault(); });
+document.addEventListener("copy", (ev) => { if (onQuestionScreen()) ev.preventDefault(); });
+
 // ---------- 4b. boslugu bagla: mesq ----------
 let prPending = null;
 
@@ -595,7 +612,7 @@ $("acct-user").onclick = () => openMe();
 $("login-back").onclick = () => show("screen-start");
 $("me-back").onclick = () => show("screen-start");
 $("me-new").onclick = () => show("screen-start");
-$("back-history-btn").onclick = () => openMe();
+$("back-history-btn").onclick = () => (me ? openMe() : show("screen-start"));
 $("logout-btn").onclick = () => { logout(); show("screen-start"); };
 
 $("login-form").onsubmit = async (ev) => {

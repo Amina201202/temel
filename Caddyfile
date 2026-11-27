@@ -8,3 +8,8 @@
 admin.{$DOMAIN} {
 	reverse_proxy ui:8501
 }
+
+# n8n paneli (workflow-lar, Telegram)
+n8n.{$DOMAIN} {
+	reverse_proxy n8n:5678
+}

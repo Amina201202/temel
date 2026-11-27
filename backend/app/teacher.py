@@ -217,6 +217,7 @@ def radar(session_id: int, teacher: Teacher = Depends(current_teacher), db: Sess
             "correct": a.diagnosis["correct"] if a.diagnosis else None,
             "roots": a.diagnosis["roots"] if a.diagnosis else [],
             "careless": is_careless(a),
+            "left_tab": (a.diagnosis or {}).get("left_tab", 0),
         } for a in attempts],
         "concepts": concept_stats,
         "top_roots": [{"concept": c, "count": n} for c, n in roots],

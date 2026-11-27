@@ -35,6 +35,8 @@ services:
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
     volumes:
       - ./data/eval:/app/eval
+      # sesli izahlar restart-dan sonra itmesin (her biri 1-3 qepikdir)
+      - tts:/tmp/temel_tts
     depends_on:
       db:
         condition: service_healthy
@@ -50,6 +52,21 @@ services:
       PUBLIC_URL: https://${DOMAIN}
     depends_on:
       - api
+
+  # Telegram: gunluk xatirlatma ve heftelik hesabat
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    restart: unless-stopped
+    environment:
+      GENERIC_TIMEZONE: Asia/Baku
+      TZ: Asia/Baku
+      N8N_HOST: n8n.${DOMAIN}
+      N8N_PROTOCOL: https
+      WEBHOOK_URL: https://n8n.${DOMAIN}/
+      N8N_DIAGNOSTICS_ENABLED: "false"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n:/files
 
   # https sertifikatini ozu alir ve yenileyir
   caddy:
@@ -67,8 +84,11 @@ services:
     depends_on:
       - api
       - ui
+      - n8n
 
 volumes:
   pgdata:
+  tts:
+  n8n_data:
   caddy_data:
   caddy_config:

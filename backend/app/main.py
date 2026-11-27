@@ -422,6 +422,7 @@ def finish_or_ask(attempt: Attempt, db: Session, feedback=None) -> AttemptStep:
             attempt.status = "done"
             attempt.finished_at = datetime.now(timezone.utc)
             d = dict(values.get("diagnosis") or {})
+            d["left_tab"] = int(store().get(f"left:{attempt.id}") or 0)
             try:
                 # ML: test tesadufi basilibmi? (careless.py)
                 d["careless"] = careless_score(db, attempt)
@@ -494,6 +495,9 @@ def answer_attempt(attempt_id: int, body: AnswerIn, db: Session = Depends(get_db
         raise HTTPException(400, "Bu cavab variantlarda yoxdur")
 
     GRAPH.invoke(Command(resume=body.value), config)
+    # pencereden cixmalari sayiriq - muellim gorsun (100% qadagan etmek olmur, amma gorunur)
+    for _ in range(min(max(body.left, 0), 10)):
+        store().incr(f"left:{attempt.id}")
 
     last = GRAPH.get_state(config).values["asked"][-1]
     db.add(AttemptAnswer(
