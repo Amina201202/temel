@@ -99,7 +99,13 @@ def pick(state: DiagState):
         if status.get(c) in ("known", "implied", "weak", "weak_implied", "untested"):
             continue
         all_tpls = state["templates"].get(c, [])
-        fresh = [t for t in all_tpls if t["id"] not in used] or all_tpls
+        fresh = [t for t in all_tpls if t["id"] not in used]
+        if not fresh and c in retried:
+            # tekrar yoxlama ucun basqa sablon yoxdur - eyni suali reqemlerini deyisib vermirik
+            # (sagirde "eyni suali yene sorusur" kimi gorunurdu), evvelki netice qalir
+            status[c] = "weak"
+            continue
+        fresh = fresh or all_tpls
         if not fresh:
             status[c] = "untested"
             continue
