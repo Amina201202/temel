@@ -1,7 +1,10 @@
-# Təməl — Sənin bilik radarın
+# Radix AI — Səhvin kökünü tapır
+
+<img src="backend/app/static/icons/icon-192.png" width="96" align="right" alt="Radix AI loqosu">
 
 > Şagird səhv edəndə səbəb çox vaxt həmin mövzuda deyil, **əvvəlki siniflərdə qalan boşluqdadır**.
-> Təməl adaptiv diaqnostik testdir: səhv cavabdan sonra mövzular qrafı üzrə geriyə enir və **kök səbəbi** tapır.
+> **Radix** latınca "kök" deməkdir, riyaziyyatdakı kök işarəsinin (√) adı da buradan gəlir.
+> Radix AI adaptiv diaqnostik testdir: səhv cavabdan sonra mövzular qrafı üzrə geriyə enir və **kök səbəbi** tapır.
 
 LTC Lab AI Engineering kursunun 6 aylıq final layihəsi · Müəllif: **Amina** ([@Amina201202](https://github.com/Amina201202))
 
@@ -123,9 +126,9 @@ Sistem **hibriddir**: Ollama varsa mövzu yoxlaması lokal işləyir, yoxdursa a
 | Fine-tuned guard | test + tam red team | **85.6%**; red team **23/24** (Gemini 24/24), **67 ms** vs 460 ms |
 
 ### Real istifadəçilər
-9-cu sinif şagirdləri sınadı. Bir şagirdin səhvləri 9-cu sinif mövzusunda idi, Təməl isə səbəbi **6-cı sinfin "Əməllər ardıcıllığı"** mövzusunda tapdı.
+9-cu sinif şagirdləri sınadı. Bir şagirdin səhvləri 9-cu sinif mövzusunda idi, Radix AI isə səbəbi **6-cı sinfin "Əməllər ardıcıllığı"** mövzusunda tapdı.
 
-> *"Birhədliləri açdım, sən demə heç nə bilmirmişəm, axırda izah da eləyir. Bunu təqdim eləsən də, eləməsən də mən işlədəcəm şəxsən."* — Mehri
+> *"Birhədliləri açdım, sən demə heç nə bilmirmişəm, axırda izah da eləyir. Bunu təqdim eləsən də, eləməsən də mən işlədəcəm şəxsən."* — 9-cu sinif şagirdi
 
 Rəylərdən sonra edilən düzəlişlər: riyazi yazılış sadələşdirildi (`^`, `*` əvəzinə `x²`), "kağız-qələm hazırla" ipucu əlavə olundu, təsadüfi basma detektoru yarandı.
 
