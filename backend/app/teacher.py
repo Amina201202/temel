@@ -396,10 +396,22 @@ def my_students(teacher: Teacher = Depends(current_teacher), db: Session = Depen
     # attempt -> sessiya: evde kecdiyi testi ayirmaq ucun
     all_att = db.scalars(select(Attempt).where(Attempt.student_id.in_(list(classes)))).all()
     in_mine = {a.id for a in all_att if a.session_id in by_id}
+    # basqa muellimin sessiyasindaki test bu muellime gorunmesin, yalniz oz sessiyasi + evde kecdikleri
+    hidden = {a.id for a in all_att if a.session_id is not None and a.session_id not in by_id}
 
     out = []
     for st in db.scalars(select(Student).where(Student.id.in_(list(classes)))).all():
         r = results_of(db, st)
+        r["attempts"] = [row for row in r["attempts"] if row["attempt_id"] not in hidden]
+        # statistikani da yalniz gorunen testlerden hesablayiriq
+        done = [row for row in r["attempts"] if row["status"] == "done"]
+        closed = set()
+        for row in done:
+            closed.update(row["closed"])
+            if row["progress"]:
+                closed.update(row["progress"]["closed"])
+        r["stats"] = {"tests": len(done), "closed": len(closed),
+                      "last_root": next((row["roots"][0] for row in done if row["roots"]), None)}
         for row in r["attempts"]:
             row.pop("token", None)  # sagirdin linki muellime getmesin
             row["home"] = row["attempt_id"] not in in_mine
