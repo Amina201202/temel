@@ -375,3 +375,36 @@ def admin_attempt_detail(attempt_id: int, db: Session = Depends(get_db)):
                      "correct_value": x.correct_value, "correct": x.correct,
                      "misconception": x.misconception} for x in answers],
     }
+
+
+# ---------- sagirdlerim: sessiyaya hesabla qosulan sagirdin butun testleri ----------
+
+@router.get("/teacher/students")
+def my_students(teacher: Teacher = Depends(current_teacher), db: Session = Depends(get_db)):
+    from .models import Student
+    from .students import results_of  # dovri import olmasin deye burda
+
+    sessions, by_id, attempts = teacher_attempts(db, teacher)
+    # yalniz hesabi olan (lebeq + PIN) sagirdler, qonaqlari tanimaq olmur
+    classes = {}
+    for a in attempts:
+        if a.student_id:
+            classes.setdefault(a.student_id, set()).add(by_id[a.session_id].class_name)
+    if not classes:
+        return []
+
+    # attempt -> sessiya: evde kecdiyi testi ayirmaq ucun
+    all_att = db.scalars(select(Attempt).where(Attempt.student_id.in_(list(classes)))).all()
+    in_mine = {a.id for a in all_att if a.session_id in by_id}
+
+    out = []
+    for st in db.scalars(select(Student).where(Student.id.in_(list(classes)))).all():
+        r = results_of(db, st)
+        for row in r["attempts"]:
+            row.pop("token", None)  # sagirdin linki muellime getmesin
+            row["home"] = row["attempt_id"] not in in_mine
+        out.append({"id": st.id, "nickname": st.nickname, "classes": sorted(classes[st.id]),
+                    "stats": r["stats"], "attempts": r["attempts"],
+                    "last": r["attempts"][0]["date"] if r["attempts"] else ""})
+    out.sort(key=lambda s: s["nickname"].lower())
+    return out

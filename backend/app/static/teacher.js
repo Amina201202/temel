@@ -105,6 +105,44 @@ async function loadOverview() {
       <td>${c.done}/${c.students}</td>
       <td>${c.accuracy === null ? "—" : c.accuracy + "%"}</td>
       <td>${c.top_root ? `<span class="chip">${esc(c.top_root)}</span>` : `<span class="chip ok">Boşluq yoxdur</span>`}</td></tr>`).join("");
+  loadStudents();
+}
+
+// ---------- sagirdlerim ----------
+
+let myStudents = [];
+
+async function loadStudents() {
+  try {
+    myStudents = await api("GET", "/teacher/students");
+  } catch (e) {
+    myStudents = [];  // xeta olsa panelin qalani islesin
+  }
+  $("my-students").hidden = !myStudents.length;
+  $("ms-body").innerHTML = myStudents.map((st, i) => `
+    <tr class="ms-row" data-ms="${i}"><td><b>${esc(st.nickname)}</b><small>${esc(st.last)}</small></td>
+      <td>${st.classes.map(esc).join(", ")}</td>
+      <td>${st.stats.tests}</td>
+      <td>${st.stats.closed ? `<span class="chip ok">${st.stats.closed}</span>` : "—"}</td>
+      <td>${st.stats.last_root ? `<span class="chip">${esc(st.stats.last_root)}</span>` : "—"}</td></tr>`).join("");
+  document.querySelectorAll("[data-ms]").forEach((r) => (r.onclick = () => openMyStudent(Number(r.dataset.ms))));
+}
+
+function openMyStudent(i) {
+  const st = myStudents[i];
+  $("d-name").textContent = st.nickname;
+  const rows = st.attempts.map((a) => {
+    const where = a.home ? `<span class="chip warn">🏠 evdə</span>` : "";
+    const res = a.status !== "done" ? `<span class="muted small">davam edir</span>`
+      : a.careless ? `<span class="chip warn">⚠️ təsadüfi basıb</span>`
+      : a.roots.length ? a.roots.map((x) => `<span class="chip">${esc(x)}</span>`).join("")
+      : `<span class="chip ok">Boşluq yoxdur</span>`;
+    const closed = a.closed.length ? `<br><small>✅ Bağladı: ${a.closed.map(esc).join(", ")}</small>` : "";
+    const score = a.answered ? ` · ${a.correct}/${a.answered}` : "";
+    return `<div class="ans"><small>${esc(a.date)} · ${esc(a.chapter)}${score}</small> ${where}<br>${res}${closed}</div>`;
+  }).join("");
+  $("d-body").innerHTML = rows || `<p class="muted">Hələ test yoxdur.</p>`;
+  $("detail").showModal();
 }
 
 // heftelik hesabat ucun Telegram: pencereni evvel aciriq, yoxsa brauzer popup-u bloklayir

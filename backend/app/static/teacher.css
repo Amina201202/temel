@@ -129,3 +129,9 @@ dialog::backdrop { background: rgba(21, 23, 43, .45); }
   font-size: 18px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
 .theme-btn:hover { border-color: var(--accent); }
 .theme-btn.floating { position: fixed; top: 14px; right: 14px; z-index: 50; box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+
+/* sagirdlerim */
+#my-students { margin-top: 16px; }
+.ms-row { cursor: pointer; }
+.ms-row:hover td { background: var(--line); }
+#d-body .ans:not(.ok):not(.no) { border: 1px solid var(--line); }
